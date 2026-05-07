@@ -150,8 +150,8 @@ export interface ScrapedPost {
   externalId: string;
   url: string;
   type: PostType;
-  caption?: string;
-  thumbnailUrl?: string;
+  caption?: string | null;
+  thumbnailUrl?: string | null;
   postedAt: Date | null;
   views: number | null;
   likes: number | null;
