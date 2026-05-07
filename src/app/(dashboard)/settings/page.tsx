@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useState } from "react";
-import { Loader2, Save } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,13 +12,54 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    email: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
 
-  const scrapeSettings = {
-    minDelay: parseInt(process.env.NEXT_PUBLIC_SCRAPE_MIN_DELAY ?? "2000"),
-    maxDelay: parseInt(process.env.NEXT_PUBLIC_SCRAPE_MAX_DELAY ?? "5000"),
-  };
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (form.newPassword && form.newPassword !== form.confirmPassword) {
+      toast({ title: "Passwords don't match", variant: "destructive" });
+      return;
+    }
+
+    if (!form.email && !form.newPassword) {
+      toast({ title: "Nothing to update", description: "Enter a new email or password." });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: form.currentPassword,
+          ...(form.email && { email: form.email }),
+          ...(form.newPassword && { newPassword: form.newPassword }),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+        return;
+      }
+
+      toast({ title: "Profile updated! Please sign in again." });
+      setForm({ email: "", currentPassword: "", newPassword: "", confirmPassword: "" });
+      await update();
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl">
@@ -48,6 +89,63 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Change Email / Password */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Change Email or Password</CardTitle>
+          <CardDescription>
+            Leave fields blank if you don't want to change them.
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSave}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>New Email</Label>
+              <Input
+                type="email"
+                placeholder={session?.user?.email ?? ""}
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <Label>New Password</Label>
+              <Input
+                type="password"
+                placeholder="Min. 6 characters"
+                value={form.newPassword}
+                onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirm New Password</Label>
+              <Input
+                type="password"
+                placeholder="Repeat new password"
+                value={form.confirmPassword}
+                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+              />
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <Label>Current Password <span className="text-destructive">*</span></Label>
+              <Input
+                type="password"
+                placeholder="Required to make any changes"
+                value={form.currentPassword}
+                onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
+                required
+              />
+            </div>
+            <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </CardContent>
+        </form>
+      </Card>
+
       {/* Scraping Settings */}
       <Card>
         <CardHeader>
@@ -60,19 +158,11 @@ export default function SettingsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Min Delay (ms)</Label>
-              <Input
-                type="number"
-                defaultValue={scrapeSettings.minDelay}
-                disabled
-              />
+              <Input type="number" defaultValue={2000} disabled />
             </div>
             <div className="space-y-2">
               <Label>Max Delay (ms)</Label>
-              <Input
-                type="number"
-                defaultValue={scrapeSettings.maxDelay}
-                disabled
-              />
+              <Input type="number" defaultValue={5000} disabled />
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -103,7 +193,6 @@ export default function SettingsPage() {
           <Separator />
           <p className="text-xs text-muted-foreground">
             Run <code className="bg-muted px-1 rounded">npm run scheduler</code> in a separate process to activate the cron scheduler.
-            On Vercel, use cron job triggers or a separate service.
           </p>
         </CardContent>
       </Card>
@@ -116,13 +205,7 @@ export default function SettingsPage() {
         <CardContent>
           <div className="space-y-2 text-sm text-muted-foreground">
             <p>Version: 0.1.0</p>
-            <p>
-              Tracks publicly visible social media analytics using surface-level data only.
-              No private API access, no authentication bypassing.
-            </p>
-            <p className="text-xs">
-              Data is scraped from public profile pages with respectful rate limiting and delays.
-            </p>
+            <p>Tracks publicly visible social media analytics using surface-level data only.</p>
           </div>
         </CardContent>
       </Card>
