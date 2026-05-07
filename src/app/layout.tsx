@@ -36,6 +36,11 @@ export default function RootLayout({
       <body className={inter.className}>
         {children}
         <Toaster />
+        <script dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+          }
+        `}} />
       </body>
     </html>
   );
