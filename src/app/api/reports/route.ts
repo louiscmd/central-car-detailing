@@ -65,10 +65,10 @@ export async function POST(req: Request) {
       month,
       year,
       title: `${client.name} — ${formatMonthYear(month, year)}`,
-      data: reportData as unknown as Record<string, unknown>,
+      data: JSON.parse(JSON.stringify(reportData)),
     },
     update: {
-      data: reportData as unknown as Record<string, unknown>,
+      data: JSON.parse(JSON.stringify(reportData)),
       updatedAt: new Date(),
     },
   });
