@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum Platform {
+  INSTAGRAM
+  TIKTOK
+  FACEBOOK
+  YOUTUBE
+}
+
+enum PostType {
+  POST
+  REEL
+  VIDEO
+  STORY
+  SHORT
+}
+
+enum SnapshotStatus {
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  role          Role      @default(USER)
+  image         String?
+  clients       Client[]
+  sessions      Session[]
+  accounts      Account[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Client {
+  id          String          @id @default(cuid())
+  name        String
+  notes       String?         @db.Text
+  tags        String[]        @default([])
+  isPaused    Boolean         @default(false)
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts    SocialAccount[]
+  reports     Report[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("clients")
+}
+
+model SocialAccount {
+  id          String          @id @default(cuid())
+  platform    Platform
+  username    String
+  profileUrl  String
+  displayName String?
+  avatarUrl   String?
+  clientId    String
+  client      Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  snapshots   DailySnapshot[]
+  posts       Post[]
+  isPaused    Boolean         @default(false)
+  lastScraped DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([clientId, platform])
+  @@map("social_accounts")
+}
+
+model DailySnapshot {
+  id             String        @id @default(cuid())
+  accountId      String
+  account        SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date           DateTime      @db.Date
+  followers      BigInt?
+  following      BigInt?
+  totalLikes     BigInt?
+  postCount      Int?
+  engagementRate Float?
+  status         SnapshotStatus @default(SUCCESS)
+  errorMessage   String?
+  rawData        Json?
+  createdAt      DateTime      @default(now())
+
+  @@unique([accountId, date])
+  @@index([accountId, date])
+  @@map("daily_snapshots")
+}
+
+model Post {
+  id          String               @id @default(cuid())
+  accountId   String
+  account     SocialAccount        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  externalId  String
+  url         String
+  type        PostType             @default(POST)
+  caption     String?              @db.Text
+  thumbnailUrl String?
+  postedAt    DateTime
+  metrics     PostMetricsHistory[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@unique([accountId, externalId])
+  @@index([accountId, postedAt])
+  @@map("posts")
+}
+
+model PostMetricsHistory {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  timestamp DateTime @default(now())
+  views     BigInt?
+  likes     BigInt?
+  comments  BigInt?
+  shares    BigInt?
+
+  @@index([postId, timestamp])
+  @@map("post_metrics_history")
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title       String
+  month       Int
+  year        Int
+  data        Json
+  pdfUrl      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([clientId, month, year])
+  @@map("reports")
+}
