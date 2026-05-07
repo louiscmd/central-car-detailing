@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverActions: {
-    allowedOrigins: ["localhost:3000"],
-  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.cdninstagram.com" },
