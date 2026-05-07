@@ -99,7 +99,7 @@ export async function scrapeAndSave(accountId: string): Promise<{
       postCount: profile.postCount ?? undefined,
       engagementRate,
       status: "SUCCESS",
-      rawData: profile as Record<string, unknown>,
+      rawData: JSON.parse(JSON.stringify(profile)),
     },
     update: {
       followers: profile.followers ?? undefined,
@@ -108,7 +108,7 @@ export async function scrapeAndSave(accountId: string): Promise<{
       postCount: profile.postCount ?? undefined,
       engagementRate,
       status: "SUCCESS",
-      rawData: profile as Record<string, unknown>,
+      rawData: JSON.parse(JSON.stringify(profile)),
     },
   });
 
