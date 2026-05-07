@@ -137,13 +137,13 @@ export interface ScrapeResult {
 
 export interface ScrapedProfile {
   username: string;
-  displayName?: string;
-  avatarUrl?: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
   followers: number | null;
   following: number | null;
   totalLikes: number | null;
   postCount: number | null;
-  bio?: string;
+  bio?: string | null;
 }
 
 export interface ScrapedPost {
