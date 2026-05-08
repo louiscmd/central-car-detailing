@@ -66,6 +66,7 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [scraping, setScraping] = useState(false);
+  const [scrapingAccount, setScrapingAccount] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState({
     platform: "INSTAGRAM" as Platform,
@@ -132,6 +133,26 @@ export default function ClientDetailPage() {
       body: JSON.stringify({ isPaused: !client?.isPaused }),
     });
     fetchClient();
+  }
+
+  async function handleScrapeAccount(accountId: string) {
+    setScrapingAccount(accountId);
+    try {
+      const res = await fetch("/api/scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId }),
+      });
+      const { data } = await res.json();
+      if (data?.success) {
+        toast({ title: "Account scraped successfully" });
+      } else {
+        toast({ title: "Scrape failed", description: data?.error, variant: "destructive" });
+      }
+      fetchClient();
+    } finally {
+      setScrapingAccount(null);
+    }
   }
 
   async function handleDelete() {
@@ -339,6 +360,20 @@ export default function ClientDetailPage() {
                             : "Not scraped"}
                         </p>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleScrapeAccount(account.id)}
+                        disabled={scrapingAccount === account.id}
+                        title="Scrape now"
+                      >
+                        {scrapingAccount === account.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        )}
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
