@@ -1,5 +1,4 @@
-import { chromium } from "playwright";
-import { BaseScraper, randomUserAgent } from "./base";
+import { getBrowser, BaseScraper, randomUserAgent } from "./base";
 import type { ScrapeResult, ScrapedPost } from "@/types";
 
 export class InstagramScraper extends BaseScraper {
@@ -8,7 +7,7 @@ export class InstagramScraper extends BaseScraper {
   }
 
   private async _scrape(profileUrl: string): Promise<ScrapeResult> {
-    const browser = await chromium.launch({ headless: true });
+    const browser = await getBrowser();
     const context = await browser.newContext({
       userAgent: randomUserAgent(),
       viewport: { width: 1280, height: 800 },

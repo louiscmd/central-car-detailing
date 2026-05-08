@@ -42,6 +42,8 @@
     "next-auth": "^5.0.0-beta.25",
     "node-cron": "^3.0.3",
     "playwright": "^1.48.2",
+    "playwright-core": "^1.48.2",
+    "@sparticuz/chromium": "^131.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.13.3",
