@@ -1,4 +1,4 @@
-import { BaseScraper, randomUserAgent } from "./base";
+import { BaseScraper } from "./base";
 import type { ScrapeResult } from "@/types";
 
 export class InstagramScraper extends BaseScraper {
@@ -9,39 +9,50 @@ export class InstagramScraper extends BaseScraper {
   private async _scrape(profileUrl: string): Promise<ScrapeResult> {
     const username = profileUrl.replace(/\/$/, "").split("/").pop() ?? "";
 
-    const res = await fetch(`https://www.instagram.com/${username}/`, {
-      headers: {
-        "User-Agent": randomUserAgent(),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-      },
-    });
+    // Use Instagram's internal profile API — same endpoint their web app uses
+    const res = await fetch(
+      `https://i.instagram.com/api/v1/users/web_profile_info/?username=${username}`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "application/json",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Referer": "https://www.instagram.com/",
+          "Origin": "https://www.instagram.com",
+          "x-ig-app-id": "936619743392459",
+          "x-requested-with": "XMLHttpRequest",
+        },
+      }
+    );
 
-    if (!res.ok) return { success: false, error: `HTTP ${res.status}` };
+    if (!res.ok) return { success: false, error: `Instagram API returned ${res.status}` };
 
-    const html = await res.text();
+    let json: Record<string, unknown>;
+    try {
+      json = await res.json() as Record<string, unknown>;
+    } catch {
+      return { success: false, error: "Failed to parse Instagram response" };
+    }
 
-    const desc = html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i)?.[1] ?? "";
-    const title = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)?.[1] ?? "";
-    const avatar = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)?.[1] ?? null;
+    const user = (json?.data as Record<string, unknown>)?.user as Record<string, unknown> | undefined;
+    if (!user) return { success: false, error: "No user data in Instagram response" };
 
-    const followersMatch = desc.match(/([\d,.]+[KkMm]?)\s*Followers/i);
-    const followingMatch = desc.match(/([\d,.]+[KkMm]?)\s*Following/i);
-    const postsMatch = desc.match(/([\d,.]+[KkMm]?)\s*Posts/i);
-
-    const displayName = title.replace(/\(@[^)]+\).*$/, "").trim() || null;
+    const followers = (user.edge_followed_by as Record<string, unknown>)?.count as number ?? null;
+    const following = (user.edge_follow as Record<string, unknown>)?.count as number ?? null;
+    const postCount = (user.edge_owner_to_timeline_media as Record<string, unknown>)?.count as number ?? null;
+    const displayName = user.full_name as string ?? null;
+    const avatarUrl = user.profile_pic_url_hd as string ?? user.profile_pic_url as string ?? null;
 
     return {
       success: true,
       profile: {
         username,
         displayName,
-        avatarUrl: avatar,
-        followers: followersMatch ? this.parseNumber(followersMatch[1]) : null,
-        following: followingMatch ? this.parseNumber(followingMatch[1]) : null,
+        avatarUrl,
+        followers,
+        following,
         totalLikes: null,
-        postCount: postsMatch ? this.parseNumber(postsMatch[1]) : null,
+        postCount,
       },
       posts: [],
     };
