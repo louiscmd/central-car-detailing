@@ -46,7 +46,12 @@ export async function GET(
     },
   });
 
-  return NextResponse.json({ data: full });
+  // Serialize BigInt fields to numbers for JSON
+  const serialized = JSON.parse(
+    JSON.stringify(full, (_, v) => (typeof v === "bigint" ? Number(v) : v))
+  );
+
+  return NextResponse.json({ data: serialized });
 }
 
 export async function PATCH(

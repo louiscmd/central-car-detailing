@@ -32,6 +32,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { PlatformBadge } from "@/components/clients/platform-badge";
@@ -48,7 +50,7 @@ interface Account {
   avatarUrl: string | null;
   isPaused: boolean;
   lastScraped: string | null;
-  snapshots: { followers: bigint | null; date: string }[];
+  snapshots: { followers: number | null; date: string }[];
 }
 
 interface Client {
@@ -66,6 +68,7 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [scraping, setScraping] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [scrapingAccount, setScrapingAccount] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState({
@@ -156,7 +159,10 @@ export default function ClientDetailPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this client and all its data? This cannot be undone.")) return;
+    setConfirmDelete(true);
+  }
+
+  async function confirmDeleteClient() {
     await fetch(`/api/clients/${id}`, { method: "DELETE" });
     router.push("/clients");
   }
@@ -172,6 +178,21 @@ export default function ClientDetailPage() {
   if (!client) return null;
 
   return (
+    <>
+    <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete {client.name}?</DialogTitle>
+          <DialogDescription>
+            This will permanently delete the client and all their social accounts, snapshots, and reports. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+          <Button variant="destructive" onClick={confirmDeleteClient}>Delete</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     <div className="space-y-6 animate-fade-in max-w-5xl">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -391,5 +412,6 @@ export default function ClientDetailPage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
