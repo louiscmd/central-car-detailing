@@ -1,20 +1,5 @@
 import { randomDelay } from "@/lib/utils";
 import type { ScrapeResult } from "@/types";
-import type { Browser } from "playwright-core";
-
-export async function getBrowser(): Promise<Browser> {
-  if (process.env.VERCEL) {
-    const chromium = await import("@sparticuz/chromium");
-    const { chromium: pw } = await import("playwright-core");
-    return pw.launch({
-      args: chromium.default.args,
-      executablePath: await chromium.default.executablePath(),
-      headless: true,
-    });
-  }
-  const { chromium } = await import("playwright");
-  return chromium.launch({ headless: true });
-}
 
 export const DEFAULT_MIN_DELAY =
   parseInt(process.env.SCRAPE_MIN_DELAY_MS ?? "2000");
