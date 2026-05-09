@@ -14,6 +14,7 @@ import {
   ExternalLink,
   StickyNote,
   BarChart3,
+  Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,7 @@ interface Account {
   avatarUrl: string | null;
   isPaused: boolean;
   lastScraped: string | null;
+  accessToken: string | null;
   snapshots: { followers: number | null; date: string }[];
 }
 
@@ -381,6 +383,15 @@ export default function ClientDetailPage() {
                             : "Not scraped"}
                         </p>
                       </div>
+                      {account.platform === "INSTAGRAM" && !account.accessToken && (
+                        <a
+                          href={`/api/instagram/auth?accountId=${account.id}`}
+                          title="Connect Instagram for reliable data"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-md text-xs text-yellow-500 hover:text-yellow-400 hover:bg-accent"
+                        >
+                          <Link2 className="w-3.5 h-3.5" />
+                        </a>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"

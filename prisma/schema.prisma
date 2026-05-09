@@ -105,6 +105,8 @@ model SocialAccount {
   client      Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   snapshots   DailySnapshot[]
   posts       Post[]
+  accessToken String?         @db.Text
+  tokenExpiry DateTime?
   isPaused    Boolean         @default(false)
   lastScraped DateTime?
   createdAt   DateTime        @default(now())

@@ -30,7 +30,9 @@ export async function scrapeAndSave(accountId: string): Promise<{
   if (!account) return { success: false, error: "Account not found" };
   if (account.isPaused) return { success: false, error: "Account is paused" };
 
-  const scraper = getScraperForPlatform(account.platform as Platform);
+  const scraper = account.platform === "INSTAGRAM"
+    ? new (await import("./instagram")).InstagramScraper(account.accessToken ?? undefined)
+    : getScraperForPlatform(account.platform as Platform);
   let result: ScrapeResult;
 
   try {
