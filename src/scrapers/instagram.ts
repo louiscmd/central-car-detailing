@@ -134,26 +134,44 @@ export class InstagramScraper extends BaseScraper {
   }
 
   private async _scrapeWithToken(username: string): Promise<ScrapeResult> {
+    // Token is stored as JSON: { userToken, pageToken, igAccountId }
+    let pageToken = this.accessToken!;
+    let igAccountId: string | null = null;
+
+    try {
+      const parsed = JSON.parse(this.accessToken!) as { pageToken?: string; igAccountId?: string };
+      if (parsed.pageToken) pageToken = parsed.pageToken;
+      if (parsed.igAccountId) igAccountId = parsed.igAccountId;
+    } catch { /* plain token, use as-is */ }
+
+    if (!igAccountId) {
+      // Try to get the IG account ID from the page token
+      const pagesRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/accounts?fields=instagram_business_account,access_token&access_token=${pageToken}`
+      );
+      if (pagesRes.ok) {
+        const pages = await pagesRes.json() as { data: { access_token: string; instagram_business_account?: { id: string } }[] };
+        const page = pages.data?.find(p => p.instagram_business_account);
+        if (page) {
+          igAccountId = page.instagram_business_account!.id;
+          pageToken = page.access_token;
+        }
+      }
+    }
+
+    if (!igAccountId) {
+      return { success: false, error: "Could not find Instagram Business account. Please reconnect." };
+    }
+
     const res = await fetch(
-      `https://graph.instagram.com/me?fields=id,username,media_count&access_token=${this.accessToken}`
+      `https://graph.facebook.com/v21.0/${igAccountId}?fields=username,name,biography,profile_picture_url,followers_count,follows_count,media_count&access_token=${pageToken}`
     );
+
     if (!res.ok) {
-      return {
-        success: false,
-        error: `Instagram API error ${res.status}. Token may have expired.`,
-      };
+      return { success: false, error: `Instagram API error ${res.status}. Token may have expired — reconnect Instagram.` };
     }
 
     const data = (await res.json()) as Record<string, unknown>;
-
-    let followers: number | null = null;
-    const insightsRes = await fetch(
-      `https://graph.instagram.com/${data.id}?fields=followers_count,name,profile_picture_url&access_token=${this.accessToken}`
-    );
-    if (insightsRes.ok) {
-      const insights = (await insightsRes.json()) as Record<string, unknown>;
-      followers = (insights.followers_count as number) ?? null;
-    }
 
     return {
       success: true,
@@ -161,8 +179,8 @@ export class InstagramScraper extends BaseScraper {
         username: (data.username as string) ?? username,
         displayName: (data.name as string) ?? null,
         avatarUrl: (data.profile_picture_url as string) ?? null,
-        followers,
-        following: null,
+        followers: (data.followers_count as number) ?? null,
+        following: (data.follows_count as number) ?? null,
         totalLikes: null,
         postCount: (data.media_count as number) ?? null,
       },

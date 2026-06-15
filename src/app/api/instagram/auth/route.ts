@@ -19,13 +19,15 @@ export async function GET(req: Request) {
   }
 
   const redirectUri = `${process.env.NEXTAUTH_URL}/api/instagram/callback`;
-  const state = Buffer.from(JSON.stringify({ accountId, userId: session.user.id })).toString("base64");
+  const state = Buffer.from(JSON.stringify({ accountId, userId: session.user.id })).toString("base64url");
 
-  const url = new URL("https://api.instagram.com/oauth/authorize");
+  const url = new URL("https://www.facebook.com/v21.0/dialog/oauth");
   url.searchParams.set("client_id", appId);
+  url.searchParams.set("display", "page");
+  url.searchParams.set("extras", JSON.stringify({ setup: { channel: "IG_API_ONBOARDING" } }));
   url.searchParams.set("redirect_uri", redirectUri);
-  url.searchParams.set("scope", "user_profile,user_media");
-  url.searchParams.set("response_type", "code");
+  url.searchParams.set("response_type", "token");
+  url.searchParams.set("scope", "instagram_basic,instagram_manage_insights,pages_show_list,pages_read_engagement");
   url.searchParams.set("state", state);
 
   return NextResponse.redirect(url.toString());
