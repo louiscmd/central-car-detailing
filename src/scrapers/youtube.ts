@@ -1,4 +1,4 @@
-import { BaseScraper, randomUserAgent } from "./base";
+import { BaseScraper } from "./base";
 import type { ScrapeResult } from "@/types";
 
 export class YouTubeScraper extends BaseScraper {
@@ -7,11 +7,16 @@ export class YouTubeScraper extends BaseScraper {
   }
 
   private async _scrape(profileUrl: string): Promise<ScrapeResult> {
-    const res = await fetch(profileUrl, {
+    // Normalise URL to channel page
+    const url = profileUrl.replace(/\/$/, "");
+    const username = url.split("/").pop() ?? "";
+
+    const res = await fetch(url, {
       headers: {
-        "User-Agent": randomUserAgent(),
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
       },
     });
 
@@ -19,30 +24,76 @@ export class YouTubeScraper extends BaseScraper {
 
     const html = await res.text();
 
-    const username = profileUrl.replace(/\/$/, "").split("/").pop() ?? "";
-
-    // YouTube embeds subscriber count in ytInitialData
     let followers: number | null = null;
-    const subMatch = html.match(/"subscriberCountText":\{"simpleText":"([^"]+)"/);
-    if (subMatch) followers = this.parseNumber(subMatch[1].replace(/[^0-9KkMmBb.]/g, ""));
+    let postCount: number | null = null;
+    let displayName: string | null = null;
+    let avatarUrl: string | null = null;
 
-    // Fallback: meta description
-    if (followers === null) {
-      const desc = html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i)?.[1] ?? "";
-      const fMatch = desc.match(/([\d,.]+[KkMm]?)\s*subscribers/i);
-      if (fMatch) followers = this.parseNumber(fMatch[1]);
+    // YouTube embeds data in ytInitialData JSON
+    const ytDataMatch = html.match(/var ytInitialData\s*=\s*(\{[\s\S]*?\});\s*(?:var |<\/script>)/);
+    if (ytDataMatch) {
+      try {
+        const json = JSON.parse(ytDataMatch[1]);
+        const header = json?.header?.pageHeaderRenderer
+          ?? json?.header?.c4TabbedHeaderRenderer;
+
+        // Subscriber count
+        const subText =
+          header?.subscriberCountText?.simpleText
+          ?? header?.subscriberCountText?.runs?.[0]?.text
+          ?? json?.sidebar?.channelSidebarRenderer?.items?.[0]
+            ?.channelAboutFullMetadataRenderer?.subscriberCountText?.simpleText;
+
+        if (subText) followers = this.parseNumber(subText.replace(/[^0-9KkMmBb.,]/g, ""));
+
+        // Channel name
+        displayName = header?.title?.simpleText
+          ?? header?.title?.runs?.[0]?.text
+          ?? null;
+
+        // Avatar
+        const avatarThumbnails = header?.avatar?.thumbnails ?? header?.channelHandleText;
+        if (Array.isArray(header?.avatar?.thumbnails)) {
+          avatarUrl = header.avatar.thumbnails.slice(-1)[0]?.url ?? null;
+        }
+
+        // Video count
+        const videosText = json?.header?.pageHeaderRenderer?.videosCountText?.runs?.[0]?.text
+          ?? null;
+        if (videosText) postCount = parseInt(videosText.replace(/,/g, ""));
+      } catch { /* continue to fallback */ }
     }
 
-    const title = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)?.[1] ?? null;
-    const avatar = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)?.[1] ?? null;
+    // Fallback: regex patterns on raw HTML
+    if (followers === null) {
+      const patterns = [
+        /"subscriberCountText":\{"simpleText":"([^"]+)"/,
+        /"subscriberCountText":\{"accessibility":\{"accessibilityData":\{"label":"([^"]+)"/,
+        /"metadataParts":\[.*?"text":\{"content":"([\d.,]+[KkMm]?\s*subscribers)"/i,
+      ];
+      for (const p of patterns) {
+        const m = html.match(p);
+        if (m) {
+          followers = this.parseNumber(m[1].replace(/[^0-9KkMmBb.,]/g, ""));
+          if (followers) break;
+        }
+      }
+    }
 
-    // Video count
-    const videoCountMatch = html.match(/"videosCountText":\{"runs":\[.*?"text":"([\d,]+)"/);
-    const postCount = videoCountMatch ? parseInt(videoCountMatch[1].replace(/,/g, "")) : null;
+    if (!displayName) {
+      displayName = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)?.[1] ?? null;
+    }
+    if (!avatarUrl) {
+      avatarUrl = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)?.[1] ?? null;
+    }
+
+    if (followers === null) {
+      return { success: false, error: "Could not extract YouTube subscriber count" };
+    }
 
     return {
       success: true,
-      profile: { username, displayName: title, avatarUrl: avatar, followers, following: null, totalLikes: null, postCount },
+      profile: { username, displayName, avatarUrl, followers, following: null, totalLikes: null, postCount },
       posts: [],
     };
   }

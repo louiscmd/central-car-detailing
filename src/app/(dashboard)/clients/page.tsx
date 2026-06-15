@@ -67,6 +67,7 @@ export default async function ClientsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {clients.map((client) => {
+            const hasData = client.accounts.some(a => a.snapshots[0]?.followers != null);
             const totalFollowers = client.accounts.reduce((sum, a) => {
               const f = a.snapshots[0]?.followers;
               return sum + (f ? Number(f) : 0);
@@ -117,7 +118,7 @@ export default async function ClientsPage() {
                     <div className="flex items-center justify-between text-sm">
                       <div>
                         <p className="font-semibold text-lg">
-                          {formatNumber(totalFollowers)}
+                          {hasData ? formatNumber(totalFollowers) : "—"}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           total followers
