@@ -15,37 +15,53 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid state" }, { status: 400 });
   }
 
-  // Get Facebook Pages + connected Instagram Business accounts
-  const accountsRes = await fetch(
-    `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${token}`
-  );
-
-  if (!accountsRes.ok) {
-    return NextResponse.json({ error: "Failed to fetch Facebook pages" }, { status: 400 });
-  }
-
-  const accountsData = await accountsRes.json() as {
-    data: { id: string; name: string; access_token: string; instagram_business_account?: { id: string } }[]
-  };
-
-  const page = accountsData.data?.find(p => p.instagram_business_account);
-  if (!page) {
-    return NextResponse.json({ error: "No Instagram Business account found. Make sure the Instagram account is connected to a Facebook Page." }, { status: 400 });
-  }
-
-  const igAccountId = page.instagram_business_account!.id;
-  const pageAccessToken = page.access_token;
-
-  // Store token data as JSON in accessToken field
-  const tokenData = JSON.stringify({ userToken: token, pageToken: pageAccessToken, igAccountId });
-
   const account = await prisma.socialAccount.findFirst({
     where: { id: parsed.accountId, client: { userId: parsed.userId } },
   });
-
   if (!account) {
     return NextResponse.json({ error: "Account not found" }, { status: 404 });
   }
+
+  // ── Try method 1: Facebook Pages → connected Instagram Business account ──
+  let igAccountId: string | null = null;
+  let pageAccessToken: string | null = null;
+
+  const pagesRes = await fetch(
+    `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${token}`
+  );
+  if (pagesRes.ok) {
+    const pagesData = await pagesRes.json() as {
+      data: { id: string; access_token: string; instagram_business_account?: { id: string } }[]
+    };
+    const page = pagesData.data?.find(p => p.instagram_business_account);
+    if (page) {
+      igAccountId = page.instagram_business_account!.id;
+      pageAccessToken = page.access_token;
+    }
+  }
+
+  // ── Try method 2: Instagram account directly linked to Facebook profile ──
+  if (!igAccountId) {
+    const meRes = await fetch(
+      `https://graph.facebook.com/v21.0/me?fields=instagram_business_account&access_token=${token}`
+    );
+    if (meRes.ok) {
+      const meData = await meRes.json() as { instagram_business_account?: { id: string } };
+      if (meData.instagram_business_account?.id) {
+        igAccountId = meData.instagram_business_account.id;
+        pageAccessToken = token; // use userToken as pageToken in this case
+      }
+    }
+  }
+
+  // ── Store whatever we found ──
+  // Even without a Business account we save the userToken so the scraper
+  // can retry discovery later. igAccountId/pageToken may be null.
+  const tokenData = JSON.stringify({
+    userToken: token,
+    pageToken: pageAccessToken ?? token,
+    igAccountId,
+  });
 
   await prisma.socialAccount.update({
     where: { id: parsed.accountId },
@@ -54,6 +70,13 @@ export async function POST(req: Request) {
       tokenExpiry: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
     },
   });
+
+  if (!igAccountId) {
+    // Token saved, but no Business account found — redirect with a warning
+    return NextResponse.json({
+      redirect: `/clients/${account.clientId}?connected=instagram&warn=no_business_account`,
+    });
+  }
 
   return NextResponse.json({ redirect: `/clients/${account.clientId}?connected=instagram` });
 }

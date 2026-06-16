@@ -11,22 +11,35 @@ export async function GET(req: Request) {
 <html>
 <head><title>Connecting Instagram...</title></head>
 <body>
-<p style="font-family:sans-serif;text-align:center;margin-top:80px">Connecting your Instagram account...</p>
+<p id="msg" style="font-family:sans-serif;text-align:center;margin-top:80px;color:#666">Connecting your Instagram account...</p>
 <script>
+  function showError(msg) {
+    var el = document.getElementById('msg');
+    el.style.color = 'red';
+    el.innerHTML = msg + ' <a href="/clients" style="color:#3b82f6">Go back</a>';
+  }
+
   const hash = window.location.hash.substring(1);
   const params = Object.fromEntries(new URLSearchParams(hash));
   const token = params.long_lived_token || params.access_token;
+
   if (!token) {
-    document.body.innerHTML = '<p style="font-family:sans-serif;text-align:center;margin-top:80px;color:red">Connection failed. <a href="/clients">Go back</a></p>';
+    showError('Connection failed: no token received from Facebook.');
   } else {
     fetch('/api/instagram/save-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, state: '${state}' })
     })
-    .then(r => r.json())
-    .then(d => { window.location.href = d.redirect || '/clients'; })
-    .catch(() => { window.location.href = '/clients?error=save_failed'; });
+    .then(async r => {
+      const d = await r.json();
+      if (d.redirect) {
+        window.location.href = d.redirect;
+      } else {
+        showError('Connection failed: ' + (d.error || 'Unknown error'));
+      }
+    })
+    .catch(e => showError('Connection failed: ' + e.message));
   }
 </script>
 </body>

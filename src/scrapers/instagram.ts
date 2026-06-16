@@ -68,17 +68,37 @@ export class InstagramScraper extends BaseScraper {
       } catch { /* plain token */ }
 
       if (!igAccountId) {
-        // Try to discover our own IG account ID from the page token
+        // Method 1: Facebook Pages → instagram_business_account
         const pagesRes = await fetch(
           `https://graph.facebook.com/v21.0/me/accounts?fields=instagram_business_account,access_token&access_token=${pageToken}`,
           { signal: AbortSignal.timeout(10000) }
         );
-        if (!pagesRes.ok) return { success: false, error: "Could not get IG account from token" };
-        const pages = await pagesRes.json() as { data: { access_token: string; instagram_business_account?: { id: string } }[] };
-        const page = pages.data?.find(p => p.instagram_business_account);
-        if (!page) return { success: false, error: "No connected Instagram Business account found for lookup" };
-        igAccountId = page.instagram_business_account!.id;
-        pageToken = page.access_token;
+        if (pagesRes.ok) {
+          const pages = await pagesRes.json() as { data: { access_token: string; instagram_business_account?: { id: string } }[] };
+          const page = pages.data?.find(p => p.instagram_business_account);
+          if (page) {
+            igAccountId = page.instagram_business_account!.id;
+            pageToken = page.access_token;
+          }
+        }
+      }
+
+      if (!igAccountId) {
+        // Method 2: Instagram directly linked to Facebook profile
+        const meRes = await fetch(
+          `https://graph.facebook.com/v21.0/me?fields=instagram_business_account&access_token=${pageToken}`,
+          { signal: AbortSignal.timeout(10000) }
+        );
+        if (meRes.ok) {
+          const meData = await meRes.json() as { instagram_business_account?: { id: string } };
+          if (meData.instagram_business_account?.id) {
+            igAccountId = meData.instagram_business_account.id;
+          }
+        }
+      }
+
+      if (!igAccountId) {
+        return { success: false, error: "No Instagram Business/Creator account found. Switch your Instagram to a Business or Creator account and link it to a Facebook Page, then reconnect." };
       }
 
       // Business Discovery: look up target username using our IG account
