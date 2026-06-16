@@ -6,10 +6,10 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isAuth = !!req.auth;
 
-  const publicPaths = ["/login", "/register"];
+  const publicPaths = ["/login", "/register", "/privacy"];
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
 
-  if (!isAuth && !isPublic && !pathname.startsWith("/api/auth")) {
+  if (!isAuth && !isPublic && !pathname.startsWith("/api/auth") && !pathname.startsWith("/api/instagram")) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
