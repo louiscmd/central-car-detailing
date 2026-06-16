@@ -30,8 +30,30 @@ export async function scrapeAndSave(accountId: string): Promise<{
   if (!account) return { success: false, error: "Account not found" };
   if (account.isPaused) return { success: false, error: "Account is paused" };
 
+  // For Instagram accounts without their own token, find any connected Instagram
+  // account belonging to the same user to use as a Business Discovery lookup token.
+  let instagramLookupToken: string | undefined;
+  if (account.platform === "INSTAGRAM" && !account.accessToken) {
+    const client = await prisma.client.findUnique({ where: { id: account.clientId } });
+    if (client) {
+      const connectedAccount = await prisma.socialAccount.findFirst({
+        where: {
+          platform: "INSTAGRAM",
+          accessToken: { not: null },
+          client: { userId: client.userId },
+        },
+      });
+      if (connectedAccount?.accessToken) {
+        instagramLookupToken = connectedAccount.accessToken;
+      }
+    }
+  }
+
   const scraper = account.platform === "INSTAGRAM"
-    ? new (await import("./instagram")).InstagramScraper(account.accessToken ?? undefined)
+    ? new (await import("./instagram")).InstagramScraper(
+        account.accessToken ?? undefined,
+        instagramLookupToken
+      )
     : getScraperForPlatform(account.platform as Platform);
   let result: ScrapeResult;
 
