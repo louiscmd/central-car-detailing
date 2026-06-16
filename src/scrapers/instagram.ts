@@ -20,35 +20,22 @@ export class InstagramScraper extends BaseScraper {
       return this._scrapeWithToken(username);
     }
 
-    // 1. Try Picuki (Instagram mirror — Vercel-accessible, caches IG profiles)
-    const picuki = await this._fetchHtml(`https://www.picuki.com/profile/${username}`);
-    if (picuki) {
-      const result = this._parsePicuki(picuki, username);
-      if (result.success) return result;
-    }
+    // 1. Instagram mobile API — works from server IPs, returns clean JSON
+    const mobileResult = await this._scrapeViaMobileApi(username);
+    if (mobileResult.success) return mobileResult;
 
-    // 2. Try Imginn (another mirror)
-    const imginn = await this._fetchHtml(`https://imginn.com/${username}/`);
-    if (imginn) {
-      const result = this._parseImginn(imginn, username);
-      if (result.success) return result;
-    }
+    // 2. Instagram web GraphQL API
+    const gqlResult = await this._scrapeViaGql(username);
+    if (gqlResult.success) return gqlResult;
 
-    // 3. Try Instanavigation
-    const instaNav = await this._fetchHtml(`https://instanavigation.com/instagram-profile/${username}`);
-    if (instaNav) {
-      const result = this._parseGenericMirror(instaNav, username);
-      if (result.success) return result;
-    }
-
-    // 4. Try direct Instagram (may work occasionally)
+    // 3. Direct Instagram HTML (works occasionally depending on server IP)
     const direct = await this._fetchHtml(`https://www.instagram.com/${username}/`);
     if (direct) {
       const result = this._parseInstagramHtml(direct, username);
       if (result.success) return result;
     }
 
-    // 5. Try allorigins proxy → Instagram
+    // 4. allorigins proxy → Instagram HTML
     const proxied = await this._fetchHtml(
       `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.instagram.com/${username}/`)}`
     );
@@ -61,6 +48,95 @@ export class InstagramScraper extends BaseScraper {
       success: false,
       error: "Could not retrieve Instagram data. The account may be private or Instagram is temporarily blocking requests.",
     };
+  }
+
+  // Instagram's internal mobile API — returns full profile JSON
+  private async _scrapeViaMobileApi(username: string): Promise<ScrapeResult> {
+    try {
+      const res = await fetch(
+        `https://i.instagram.com/api/v1/users/web_profile_info/?username=${username}`,
+        {
+          headers: {
+            "User-Agent": "Instagram 76.0.0.15.395 Android (24/7.0; 640dpi; 1440x2560; samsung; SM-G930F; herolte; samsungexynos8890; en_US; 138226743)",
+            "X-IG-App-ID": "936619743392459",
+            "Accept": "application/json",
+          },
+          signal: AbortSignal.timeout(12000),
+        }
+      );
+
+      if (!res.ok) return { success: false, error: `Mobile API ${res.status}` };
+
+      const json = await res.json() as { data?: { user?: Record<string, unknown> } };
+      const u = json?.data?.user;
+      if (!u) return { success: false, error: "No user data in mobile API response" };
+
+      const followers = (u.edge_followed_by as { count?: number })?.count ?? null;
+      const following = (u.edge_follow as { count?: number })?.count ?? null;
+      const postCount = (u.edge_owner_to_timeline_media as { count?: number })?.count ?? null;
+
+      if (followers === null) return { success: false, error: "No follower count in mobile API response" };
+
+      return {
+        success: true,
+        profile: {
+          username: (u.username as string) ?? username,
+          displayName: (u.full_name as string) ?? null,
+          avatarUrl: (u.profile_pic_url_hd as string) ?? (u.profile_pic_url as string) ?? null,
+          followers,
+          following,
+          totalLikes: null,
+          postCount,
+        },
+        posts: [],
+      };
+    } catch {
+      return { success: false, error: "Mobile API request failed" };
+    }
+  }
+
+  // Instagram web GraphQL (secondary approach)
+  private async _scrapeViaGql(username: string): Promise<ScrapeResult> {
+    try {
+      const res = await fetch(
+        `https://www.instagram.com/api/v1/users/web_profile_info/?username=${username}`,
+        {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "X-IG-App-ID": "936619743392459",
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json",
+            "Referer": "https://www.instagram.com/",
+          },
+          signal: AbortSignal.timeout(12000),
+        }
+      );
+
+      if (!res.ok) return { success: false, error: `GQL API ${res.status}` };
+
+      const json = await res.json() as { data?: { user?: Record<string, unknown> } };
+      const u = json?.data?.user;
+      if (!u) return { success: false, error: "No user data in GQL response" };
+
+      const followers = (u.edge_followed_by as { count?: number })?.count ?? null;
+      if (followers === null) return { success: false, error: "No follower count in GQL response" };
+
+      return {
+        success: true,
+        profile: {
+          username: (u.username as string) ?? username,
+          displayName: (u.full_name as string) ?? null,
+          avatarUrl: (u.profile_pic_url_hd as string) ?? (u.profile_pic_url as string) ?? null,
+          followers,
+          following: (u.edge_follow as { count?: number })?.count ?? null,
+          totalLikes: null,
+          postCount: (u.edge_owner_to_timeline_media as { count?: number })?.count ?? null,
+        },
+        posts: [],
+      };
+    } catch {
+      return { success: false, error: "GQL API request failed" };
+    }
   }
 
   private async _fetchHtml(url: string): Promise<string | null> {
@@ -80,6 +156,8 @@ export class InstagramScraper extends BaseScraper {
       return null;
     }
   }
+
+  // ── Mirror parsers kept as reference but no longer called ──
 
   // Parse picuki.com/profile/{username}
   private _parsePicuki(html: string, username: string): ScrapeResult {
