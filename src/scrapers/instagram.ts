@@ -20,34 +20,61 @@ export class InstagramScraper extends BaseScraper {
       return this._scrapeWithToken(username);
     }
 
-    // 1. Instagram mobile API — works from server IPs, returns clean JSON
+    // 1. Call our own Edge Function (runs on Cloudflare IPs, not AWS/Vercel IPs)
+    //    Instagram allows Cloudflare but blocks AWS — this is the reliable path.
+    const edgeResult = await this._scrapeViaEdge(username);
+    if (edgeResult.success) return edgeResult;
+
+    // 2. Direct Instagram mobile API (works if running locally or on non-blocked IPs)
     const mobileResult = await this._scrapeViaMobileApi(username);
     if (mobileResult.success) return mobileResult;
 
-    // 2. Instagram web GraphQL API
+    // 3. Instagram web API
     const gqlResult = await this._scrapeViaGql(username);
     if (gqlResult.success) return gqlResult;
 
-    // 3. Direct Instagram HTML (works occasionally depending on server IP)
+    // 4. Direct Instagram HTML (last resort)
     const direct = await this._fetchHtml(`https://www.instagram.com/${username}/`);
     if (direct) {
       const result = this._parseInstagramHtml(direct, username);
       if (result.success) return result;
     }
 
-    // 4. allorigins proxy → Instagram HTML
-    const proxied = await this._fetchHtml(
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.instagram.com/${username}/`)}`
-    );
-    if (proxied) {
-      const result = this._parseInstagramHtml(proxied, username);
-      if (result.success) return result;
-    }
-
     return {
       success: false,
-      error: "Could not retrieve Instagram data. The account may be private or Instagram is temporarily blocking requests.",
+      error: "Could not retrieve Instagram data. The account may be private.",
     };
+  }
+
+  // Call our own /api/instagram/profile Edge Function (Cloudflare IPs bypass Instagram's AWS block)
+  private async _scrapeViaEdge(username: string): Promise<ScrapeResult> {
+    try {
+      const baseUrl = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://social-analytics-dashboard-liard.vercel.app";
+      const res = await fetch(`${baseUrl}/api/instagram/profile?username=${encodeURIComponent(username)}`, {
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!res.ok) return { success: false, error: `Edge proxy ${res.status}` };
+
+      const data = await res.json() as { success?: boolean; error?: string; followers?: number; following?: number; postCount?: number; displayName?: string; avatarUrl?: string; username?: string };
+      if (!data.success) return { success: false, error: data.error ?? "Edge proxy failed" };
+
+      return {
+        success: true,
+        profile: {
+          username: data.username ?? username,
+          displayName: data.displayName ?? null,
+          avatarUrl: data.avatarUrl ?? null,
+          followers: data.followers ?? null,
+          following: data.following ?? null,
+          totalLikes: null,
+          postCount: data.postCount ?? null,
+        },
+        posts: [],
+      };
+    } catch {
+      return { success: false, error: "Edge proxy request failed" };
+    }
   }
 
   // Instagram's internal mobile API — returns full profile JSON
