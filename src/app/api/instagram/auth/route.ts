@@ -27,7 +27,7 @@ export async function GET(req: Request) {
   url.searchParams.set("extras", JSON.stringify({ setup: { channel: "IG_API_ONBOARDING" } }));
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("response_type", "token");
-  url.searchParams.set("scope", "instagram_basic,instagram_manage_insights,pages_show_list,pages_read_engagement");
+  url.searchParams.set("scope", "instagram_basic,pages_show_list,pages_read_engagement");
   url.searchParams.set("state", state);
 
   return NextResponse.redirect(url.toString());

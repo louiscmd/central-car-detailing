@@ -55,8 +55,6 @@ export async function POST(req: Request) {
   }
 
   // ── Store whatever we found ──
-  // Even without a Business account we save the userToken so the scraper
-  // can retry discovery later. igAccountId/pageToken may be null.
   const tokenData = JSON.stringify({
     userToken: token,
     pageToken: pageAccessToken ?? token,
@@ -67,14 +65,17 @@ export async function POST(req: Request) {
     where: { id: parsed.accountId },
     data: {
       accessToken: tokenData,
-      tokenExpiry: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
+      tokenExpiry: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
     },
   });
 
   if (!igAccountId) {
-    // Token saved, but no Business account found — redirect with a warning
     return NextResponse.json({
       redirect: `/clients/${account.clientId}?connected=instagram&warn=no_business_account`,
+      debug: {
+        message: "Token saved but no Instagram Business account found via Pages or direct profile link.",
+        hint: "Make sure your Instagram Business account is linked to a Facebook Page, then reconnect.",
+      }
     });
   }
 
