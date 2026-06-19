@@ -22,14 +22,16 @@ export async function GET(req: Request) {
   const hash = window.location.hash.substring(1);
   const params = Object.fromEntries(new URLSearchParams(hash));
   const token = params.long_lived_token || params.access_token;
+  // Facebook returns state in the fragment, not the query string
+  const state = params.state || '${state}';
 
   if (!token) {
-    showError('Connection failed: no token received from Facebook.');
+    showError('Connection failed: no token received from Facebook. hash=' + hash.substring(0,80));
   } else {
     fetch('/api/instagram/save-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, state: '${state}' })
+      body: JSON.stringify({ token, state })
     })
     .then(async r => {
       const d = await r.json();
