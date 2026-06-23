@@ -4,17 +4,17 @@ export interface CityEntry {
 }
 
 export const METRO_AREAS: Record<string, string[]> = {
-  "Warsaw": ["Janki","Marki","Ząbki","Zielonka","Wołomin","Kobyłka","Radzymin","Piaseczno","Konstancin-Jeziorna","Józefów","Otwock","Pruszków","Brwinów","Grodzisk Mazowiecki","Legionowo","Łomianki","Raszyn","Michałowice"],
-  "Kraków": ["Wieliczka","Skawina","Niepołomice","Zabierzów","Krzeszowice","Myślenice","Bochnia","Zielonki"],
-  "Wrocław": ["Siechnice","Kąty Wrocławskie","Kobierzyce","Oława","Trzebnica","Oleśnica","Długołęka"],
-  "Poznań": ["Swarzędz","Luboń","Komorniki","Mosina","Tarnowo Podgórne","Suchy Las","Czerwonak","Kórnik"],
-  "Gdańsk / Tricity": ["Sopot","Gdynia","Pruszcz Gdański","Rumia","Reda","Wejherowo","Żukowo"],
-  "Łódź": ["Pabianice","Zgierz","Aleksandrów Łódzki","Konstantynów Łódzki","Rzgów","Stryków"],
-  "Katowice / Upper Silesia": ["Chorzów","Bytom","Gliwice","Zabrze","Tychy","Sosnowiec","Dąbrowa Górnicza","Jaworzno","Mysłowice","Siemianowice Śląskie","Ruda Śląska"],
-  "Szczecin": ["Police","Goleniów","Stargard","Dobra"],
-  "Lublin": ["Świdnik","Łęczna","Lubartów","Nałęczów"],
-  "Bydgoszcz": ["Solec Kujawski","Koronowo","Nakło nad Notecią"],
-  "Białystok": ["Choroszcz","Wasilków","Supraśl","Łapy"],
+  "Warsaw": ["Warszawa","Janki","Marki","Ząbki","Zielonka","Wołomin","Kobyłka","Radzymin","Piaseczno","Konstancin-Jeziorna","Józefów","Otwock","Pruszków","Brwinów","Grodzisk Mazowiecki","Legionowo","Łomianki","Raszyn","Michałowice"],
+  "Kraków": ["Kraków","Wieliczka","Skawina","Niepołomice","Zabierzów","Krzeszowice","Myślenice","Bochnia","Zielonki"],
+  "Wrocław": ["Wrocław","Siechnice","Kąty Wrocławskie","Kobierzyce","Oława","Trzebnica","Oleśnica","Długołęka"],
+  "Poznań": ["Poznań","Swarzędz","Luboń","Komorniki","Mosina","Tarnowo Podgórne","Suchy Las","Czerwonak","Kórnik"],
+  "Gdańsk / Tricity": ["Gdańsk","Sopot","Gdynia","Pruszcz Gdański","Rumia","Reda","Wejherowo","Żukowo"],
+  "Łódź": ["Łódź","Pabianice","Zgierz","Aleksandrów Łódzki","Konstantynów Łódzki","Rzgów","Stryków"],
+  "Katowice / Upper Silesia": ["Katowice","Chorzów","Bytom","Gliwice","Zabrze","Tychy","Sosnowiec","Dąbrowa Górnicza","Jaworzno","Mysłowice","Siemianowice Śląskie","Ruda Śląska"],
+  "Szczecin": ["Szczecin","Police","Goleniów","Stargard","Dobra"],
+  "Lublin": ["Lublin","Świdnik","Łęczna","Lubartów","Nałęczów"],
+  "Bydgoszcz": ["Bydgoszcz","Solec Kujawski","Koronowo","Nakło nad Notecią"],
+  "Białystok": ["Białystok","Choroszcz","Wasilków","Supraśl","Łapy"],
 };
 
 export const ALL_CITIES: CityEntry[] = Object.entries(METRO_AREAS).flatMap(([metro, cities]) =>
