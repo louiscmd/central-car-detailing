@@ -1,13 +1,6 @@
 import { cn, platformColor, platformLabel } from "@/lib/utils";
 import type { Platform } from "@/types";
 
-const platformIcons: Record<Platform, string> = {
-  INSTAGRAM: "IG",
-  TIKTOK: "TT",
-  FACEBOOK: "FB",
-  YOUTUBE: "YT",
-};
-
 interface PlatformBadgeProps {
   platform: Platform;
   className?: string;
@@ -27,7 +20,6 @@ export function PlatformBadge({ platform, className }: PlatformBadgeProps) {
         backgroundColor: `${color}15`,
       }}
     >
-      <span className="font-bold">{platformIcons[platform]}</span>
       {platformLabel(platform)}
     </span>
   );
