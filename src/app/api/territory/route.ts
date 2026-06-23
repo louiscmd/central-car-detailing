@@ -18,15 +18,18 @@ export async function POST(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json() as {
-    city: string; metro: string; category: string;
+    id?: string; city: string; metro: string; category: string;
     totalBusinesses?: number; contacted?: number; meetings?: number;
     activeLeads?: number; clientsWon?: number; mrr?: number; notes?: string;
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id: _id, ...data } = body;
+
   const entry = await prisma.territoryEntry.upsert({
-    where: { userId_city_category: { userId: session.user.id, city: body.city, category: body.category } },
-    create: { userId: session.user.id, ...body },
-    update: body,
+    where: { userId_city_category: { userId: session.user.id, city: data.city, category: data.category } },
+    create: { userId: session.user.id, ...data },
+    update: data,
   });
   return NextResponse.json(entry);
 }
