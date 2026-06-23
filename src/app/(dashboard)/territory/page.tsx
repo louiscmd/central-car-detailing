@@ -14,12 +14,13 @@ interface CustomMetro { name: string; cities: string[]; }
 interface TerritorySettings {
   country: string;
   activeCategories: string[];
+  excludedCities: string[];
   customMetros: CustomMetro[];
 }
 
 const COUNTRIES = ["Poland", "Germany", "France", "Spain", "Italy", "UK", "Netherlands", "Czech Republic", "Slovakia", "Hungary", "Romania", "Ukraine", "Other"];
 
-const DEFAULT_SETTINGS: TerritorySettings = { country: "Poland", activeCategories: [], customMetros: [] };
+const DEFAULT_SETTINGS: TerritorySettings = { country: "Poland", activeCategories: [], excludedCities: [], customMetros: [] };
 
 function penetration(contacted: number, total: number) {
   if (!total) return 0;
@@ -190,6 +191,61 @@ function SettingsModal({ settings, onSave, onClose }: {
           <p className="text-xs text-muted-foreground">Leave all unselected to show every category.</p>
         </div>
 
+        {/* Built-in Polish cities (shown when country = Poland) */}
+        {form.country === "Poland" && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium">Polish Cities</label>
+              <p className="text-xs text-muted-foreground mt-0.5">Click × to hide a city from your tracker. Click it again to restore.</p>
+            </div>
+            {Object.entries(METRO_AREAS).map(([metro, cities]) => {
+              const allExcluded = cities.every(c => form.excludedCities.includes(c));
+              return (
+                <div key={metro} className="border border-border rounded-lg overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/30">
+                    <span className="text-sm font-medium flex-1">{metro}</span>
+                    <button
+                      onClick={() => setForm(f => ({
+                        ...f,
+                        excludedCities: allExcluded
+                          ? f.excludedCities.filter(c => !cities.includes(c))
+                          : [...new Set([...f.excludedCities, ...cities])],
+                      }))}
+                      className="text-xs text-muted-foreground hover:text-foreground">
+                      {allExcluded ? "Restore all" : "Hide all"}
+                    </button>
+                  </div>
+                  <div className="p-2 flex flex-wrap gap-1.5">
+                    {cities.map(city => {
+                      const excluded = form.excludedCities.includes(city);
+                      return (
+                        <span key={city}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors ${
+                            excluded
+                              ? "bg-muted/30 text-muted-foreground border-border line-through"
+                              : "bg-muted text-foreground border-transparent"
+                          }`}>
+                          {city}
+                          <button
+                            onClick={() => setForm(f => ({
+                              ...f,
+                              excludedCities: excluded
+                                ? f.excludedCities.filter(c => c !== city)
+                                : [...f.excludedCities, city],
+                            }))}
+                            className="hover:text-primary">
+                            {excluded ? <Plus className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Custom metros & cities */}
         <div className="space-y-3">
           <label className="block text-sm font-medium">Custom Metro Areas & Cities</label>
@@ -250,7 +306,7 @@ function SettingsModal({ settings, onSave, onClose }: {
                     {cityDropdownOpen === metro.name && (() => {
                       const q = (newCityInput[metro.name] ?? "").toLowerCase();
                       const suggestions = (form.country === "Poland" ? ALL_CITIES : [])
-                        .filter(c => !metro.cities.includes(c.name) && (q === "" || c.name.toLowerCase().includes(q)))
+                        .filter(c => !metro.cities.includes(c.name) && !form.excludedCities.includes(c.name) && (q === "" || c.name.toLowerCase().includes(q)))
                         .slice(0, 8);
                       return suggestions.length > 0 ? (
                         <div className="absolute z-10 top-full left-0 right-10 mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
@@ -322,7 +378,13 @@ export default function TerritoryPage() {
     : BUSINESS_CATEGORIES.filter(c => settings.activeCategories.includes(c.value));
 
   // Metro areas to display
-  const builtInMetros = settings.country === "Poland" ? METRO_AREAS : {};
+  const builtInMetros = settings.country === "Poland"
+    ? Object.fromEntries(
+        Object.entries(METRO_AREAS)
+          .map(([metro, cities]) => [metro, cities.filter(c => !settings.excludedCities.includes(c))] as const)
+          .filter(([, cities]) => cities.length > 0)
+      )
+    : {};
   const customMetrosMap: Record<string, string[]> = Object.fromEntries(
     settings.customMetros.map(m => [m.name, m.cities])
   );
