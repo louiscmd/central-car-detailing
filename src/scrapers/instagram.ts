@@ -18,35 +18,76 @@ export class InstagramScraper extends BaseScraper {
   private async _scrape(profileUrl: string): Promise<ScrapeResult> {
     const username = profileUrl.replace(/\/$/, "").split("/").pop() ?? "";
 
-    // 1. This account's own connected token → direct Graph API call
+    // 1. Apify Instagram Profile Scraper — works from Vercel, no auth needed
+    if (process.env.APIFY_TOKEN) {
+      const apifyResult = await this._scrapeViaApify(username);
+      if (apifyResult.success) return apifyResult;
+    }
+
+    // 2. This account's own connected token → direct Graph API call
     if (this.accessToken) {
       return this._scrapeWithToken(username);
     }
 
-    // 2. Another connected account's token → Business Discovery API
-    //    This is the reliable path from Vercel — uses Meta's own API, never blocked.
+    // 3. Another connected account's token → Business Discovery API
     if (this.lookupToken) {
       const result = await this._scrapeViaBusinessDiscovery(username, this.lookupToken);
       if (result.success) return result;
-      // If Business Discovery failed (e.g. personal account), fall through to scraping
     }
 
-    // 3. Direct Instagram mobile API (works from non-cloud IPs)
+    // 4. Direct Instagram mobile API (works from non-cloud IPs)
     const mobileResult = await this._scrapeViaMobileApi(username);
     if (mobileResult.success) return mobileResult;
 
-    // 4. Instagram web API variant
+    // 5. Instagram web API variant
     const gqlResult = await this._scrapeViaGql(username);
     if (gqlResult.success) return gqlResult;
 
-    // 5. Edge function proxy (Cloudflare IPs)
-    const edgeResult = await this._scrapeViaEdge(username);
-    if (edgeResult.success) return edgeResult;
-
     return {
       success: false,
-      error: "Could not retrieve Instagram data. Connect an Instagram account via the link button to enable reliable scraping.",
+      error: "Could not retrieve Instagram data.",
     };
+  }
+
+  // ─── Apify Instagram Profile Scraper ─────────────────────────────────────
+  private async _scrapeViaApify(username: string): Promise<ScrapeResult> {
+    try {
+      const token = process.env.APIFY_TOKEN!;
+      const res = await fetch(
+        `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items?token=${token}&timeout=55`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usernames: [username] }),
+          signal: AbortSignal.timeout(58000),
+        }
+      );
+
+      if (!res.ok) return { success: false, error: `Apify ${res.status}` };
+
+      const items = await res.json() as Record<string, unknown>[];
+      const u = items?.[0];
+      if (!u) return { success: false, error: "Apify: no data returned" };
+
+      const followers = (u.followersCount as number) ?? null;
+      if (followers === null) return { success: false, error: "Apify: no follower count" };
+
+      return {
+        success: true,
+        profile: {
+          username: (u.username as string) ?? username,
+          displayName: (u.fullName as string) ?? null,
+          avatarUrl: (u.profilePicUrl as string) ?? null,
+          followers,
+          following: (u.followsCount as number) ?? null,
+          totalLikes: null,
+          postCount: (u.postsCount as number) ?? null,
+        },
+        posts: [],
+      };
+    } catch (e) {
+      return { success: false, error: `Apify error: ${e instanceof Error ? e.message : String(e)}` };
+    }
   }
 
   // ─── Business Discovery API ───────────────────────────────────────────────

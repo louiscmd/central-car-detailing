@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "src/app/api/scrape/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/instagram/callback/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
