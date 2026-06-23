@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { MapPin, Plus, Edit2, X, TrendingUp, Building2, ChevronDown, ChevronRight, Settings, Check, Trash2, Search } from "lucide-react";
-import { METRO_AREAS, BUSINESS_CATEGORIES } from "@/lib/territory-data";
+import { METRO_AREAS, BUSINESS_CATEGORIES, ALL_CITIES } from "@/lib/territory-data";
 
 interface TerritoryEntry {
   id: string; city: string; metro: string; category: string;
@@ -93,6 +93,7 @@ function SettingsModal({ settings, onSave, onClose }: {
   const [form, setForm] = useState<TerritorySettings>(settings);
   const [newMetroName, setNewMetroName] = useState("");
   const [newCityInput, setNewCityInput] = useState<Record<string, string>>({});
+  const [cityDropdownOpen, setCityDropdownOpen] = useState<string | null>(null);
   const [editingMetro, setEditingMetro] = useState<string | null>(null);
 
   const toggleCategory = (val: string) => {
@@ -115,8 +116,8 @@ function SettingsModal({ settings, onSave, onClose }: {
     setForm(f => ({ ...f, customMetros: f.customMetros.filter(m => m.name !== name) }));
   };
 
-  const addCity = (metroName: string) => {
-    const city = (newCityInput[metroName] ?? "").trim();
+  const addCity = (metroName: string, cityOverride?: string) => {
+    const city = (cityOverride ?? newCityInput[metroName] ?? "").trim();
     if (!city) return;
     setForm(f => ({
       ...f,
@@ -127,6 +128,7 @@ function SettingsModal({ settings, onSave, onClose }: {
       ),
     }));
     setNewCityInput(prev => ({ ...prev, [metroName]: "" }));
+    setCityDropdownOpen(null);
   };
 
   const removeCity = (metroName: string, city: string) => {
@@ -219,18 +221,50 @@ function SettingsModal({ settings, onSave, onClose }: {
                       </span>
                     ))}
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      placeholder="Add city…"
-                      value={newCityInput[metro.name] ?? ""}
-                      onChange={e => setNewCityInput(prev => ({ ...prev, [metro.name]: e.target.value }))}
-                      onKeyDown={e => e.key === "Enter" && addCity(metro.name)}
-                      className="flex-1 bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <button onClick={() => addCity(metro.name)}
-                      className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm">
-                      Add
-                    </button>
+                  {/* City picker */}
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                        <input
+                          placeholder="Search or type a city…"
+                          value={newCityInput[metro.name] ?? ""}
+                          onChange={e => {
+                            setNewCityInput(prev => ({ ...prev, [metro.name]: e.target.value }));
+                            setCityDropdownOpen(metro.name);
+                          }}
+                          onFocus={() => setCityDropdownOpen(metro.name)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") { addCity(metro.name); e.preventDefault(); }
+                            if (e.key === "Escape") setCityDropdownOpen(null);
+                          }}
+                          className="w-full pl-8 pr-3 py-1.5 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                      <button onClick={() => addCity(metro.name)}
+                        className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm shrink-0">
+                        Add
+                      </button>
+                    </div>
+                    {/* Dropdown suggestions */}
+                    {cityDropdownOpen === metro.name && (() => {
+                      const q = (newCityInput[metro.name] ?? "").toLowerCase();
+                      const suggestions = (form.country === "Poland" ? ALL_CITIES : [])
+                        .filter(c => !metro.cities.includes(c.name) && (q === "" || c.name.toLowerCase().includes(q)))
+                        .slice(0, 8);
+                      return suggestions.length > 0 ? (
+                        <div className="absolute z-10 top-full left-0 right-10 mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                          {suggestions.map(c => (
+                            <button key={c.name}
+                              onMouseDown={e => { e.preventDefault(); addCity(metro.name, c.name); }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center justify-between">
+                              <span>{c.name}</span>
+                              <span className="text-xs text-muted-foreground">{c.metro}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               )}
