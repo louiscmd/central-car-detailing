@@ -40,10 +40,11 @@ model User {
   password      String
   role          Role      @default(USER)
   image         String?
-  clients          Client[]
-  sessions         Session[]
-  accounts         Account[]
-  territoryEntries TerritoryEntry[]
+  clients           Client[]
+  sessions          Session[]
+  accounts          Account[]
+  territoryEntries  TerritoryEntry[]
+  territorySettings TerritorySettings?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -224,4 +225,17 @@ model TerritoryEntry {
 
   @@unique([userId, city, category])
   @@map("territory_entries")
+}
+
+model TerritorySettings {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country          String   @default("Poland")
+  activeCategories String[] @default([])
+  customMetros     Json     @default("[]")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("territory_settings")
 }
