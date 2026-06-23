@@ -40,11 +40,12 @@ model User {
   password      String
   role          Role      @default(USER)
   image         String?
-  clients       Client[]
-  sessions      Session[]
-  accounts      Account[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  clients          Client[]
+  sessions         Session[]
+  accounts         Account[]
+  territoryEntries TerritoryEntry[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@map("users")
 }
@@ -86,10 +87,11 @@ model Client {
   isPaused    Boolean         @default(false)
   userId      String
   user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accounts    SocialAccount[]
-  reports     Report[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  accounts         SocialAccount[]
+  reports          Report[]
+  revenueEstimate  RevenueEstimate?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   @@map("clients")
 }
@@ -183,4 +185,43 @@ model Report {
 
   @@unique([clientId, month, year])
   @@map("reports")
+}
+
+model RevenueEstimate {
+  id               String   @id @default(cuid())
+  clientId         String   @unique
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  industry         String   @default("restaurant")
+  aov              Float    @default(0)
+  monthlyCustomers Int      @default(0)
+  profitMargin     Float    @default(0.20)
+  conversionRate   Float    @default(0.02)
+  followerGrowth   Float    @default(0)
+  reachGrowth      Float    @default(0)
+  engagementGrowth Float    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("revenue_estimates")
+}
+
+model TerritoryEntry {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city            String
+  metro           String
+  category        String
+  totalBusinesses Int      @default(0)
+  contacted       Int      @default(0)
+  meetings        Int      @default(0)
+  activeLeads     Int      @default(0)
+  clientsWon      Int      @default(0)
+  mrr             Float    @default(0)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, city, category])
+  @@map("territory_entries")
 }

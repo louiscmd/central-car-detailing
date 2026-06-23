@@ -12,6 +12,8 @@ import {
   Menu,
   X,
   Download,
+  TrendingUp,
+  MapPin,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -28,6 +30,8 @@ const navItems = [
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/reports", label: "Reports", icon: FileText },
+  { href: "/revenue-estimator", label: "Revenue Estimator", icon: TrendingUp },
+  { href: "/territory", label: "Territory Tracker", icon: MapPin },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

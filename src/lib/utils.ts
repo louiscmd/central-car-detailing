@@ -66,7 +66,7 @@ export function randomDelay(minMs: number, maxMs: number) {
 export function platformColor(platform: string): string {
   const colors: Record<string, string> = {
     INSTAGRAM: "#E1306C",
-    TIKTOK: "#010101",
+    TIKTOK: "#25F4EE",
     FACEBOOK: "#1877F2",
     YOUTUBE: "#FF0000",
   };
