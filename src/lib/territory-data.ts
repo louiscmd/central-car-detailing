@@ -25,6 +25,7 @@ export const BUSINESS_CATEGORIES = [
   { value: "restaurant", label: "Restaurants" },
   { value: "cafe", label: "Cafés" },
   { value: "pizzeria", label: "Pizzerias" },
+  { value: "kebab", label: "Kebabs" },
   { value: "hotel", label: "Hotels" },
   { value: "barbershop", label: "Barbershops" },
   { value: "hair_salon", label: "Hair Salons" },
