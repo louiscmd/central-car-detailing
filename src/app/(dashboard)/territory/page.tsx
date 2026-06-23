@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { MapPin, Plus, Edit2, X, TrendingUp, Building2, ChevronDown, ChevronRight, Settings, Check, Trash2 } from "lucide-react";
+import { MapPin, Plus, Edit2, X, TrendingUp, Building2, ChevronDown, ChevronRight, Settings, Check, Trash2, Search } from "lucide-react";
 import { METRO_AREAS, BUSINESS_CATEGORIES } from "@/lib/territory-data";
 
 interface TerritoryEntry {
@@ -268,6 +268,7 @@ export default function TerritoryPage() {
   const [expandedMetros, setExpandedMetros] = useState<Set<string>>(new Set(["Warsaw"]));
   const [editing, setEditing] = useState<EditingEntry | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [citySearch, setCitySearch] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -359,6 +360,23 @@ export default function TerritoryPage() {
         </button>
       </div>
 
+      {/* City search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Search cities…"
+          value={citySearch}
+          onChange={e => setCitySearch(e.target.value)}
+          className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        {citySearch && (
+          <button onClick={() => setCitySearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+            <X className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+          </button>
+        )}
+      </div>
+
       {/* Category filter */}
       <div className="flex flex-wrap gap-2">
         {visibleCategories.map(c => (
@@ -403,12 +421,18 @@ export default function TerritoryPage() {
       ) : (
         <div className="space-y-3">
           {Object.entries(allMetros).map(([metro, cities]) => {
+            const q = citySearch.toLowerCase();
+            const filteredCities = q
+              ? cities.filter(c => c.toLowerCase().includes(q))
+              : cities;
+            if (q && filteredCities.length === 0) return null;
+            const isSearching = !!q;
             const metroEntries = entries.filter(e => e.metro === metro && e.category === selectedCategory);
             const metroPenetration = metroEntries.length
               ? penetration(metroEntries.reduce((s, e) => s + e.contacted, 0), metroEntries.reduce((s, e) => s + e.totalBusinesses, 0))
               : 0;
             const metroMRR = metroEntries.reduce((s, e) => s + e.mrr, 0);
-            const expanded = expandedMetros.has(metro);
+            const expanded = isSearching || expandedMetros.has(metro);
 
             return (
               <div key={metro} className="bg-card border border-border rounded-xl overflow-hidden">
@@ -418,7 +442,7 @@ export default function TerritoryPage() {
                   {expanded ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
                   <MapPin className="w-4 h-4 text-primary shrink-0" />
                   <span className="font-medium flex-1">{metro}</span>
-                  <span className="text-xs text-muted-foreground">{cities.length} cities</span>
+                  <span className="text-xs text-muted-foreground">{isSearching ? `${filteredCities.length}/` : ""}{cities.length} cities</span>
                   {metroMRR > 0 && <span className="text-xs font-medium text-green-500">{Math.round(metroMRR).toLocaleString("pl-PL")} PLN MRR</span>}
                   {metroPenetration > 0 && (
                     <span className={`text-xs font-medium ${metroPenetration >= 70 ? "text-red-500" : metroPenetration >= 30 ? "text-amber-500" : "text-green-500"}`}>
@@ -429,7 +453,7 @@ export default function TerritoryPage() {
 
                 {expanded && (
                   <div className="border-t border-border divide-y divide-border">
-                    {cities.map(city => {
+                    {filteredCities.map(city => {
                       const entry = getEntry(city);
                       const pct = entry ? penetration(entry.contacted, entry.totalBusinesses) : 0;
                       const saturation = pct >= 70 ? "Saturated" : pct >= 30 ? "Active" : entry?.contacted ? "Starting" : "Opportunity";
