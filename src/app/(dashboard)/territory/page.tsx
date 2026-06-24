@@ -394,6 +394,8 @@ function SettingsModal({ settings, onSave, onClose, onReset }: {
 export default function TerritoryPage() {
   const [entries, setEntries] = useState<TerritoryEntry[]>([]);
   const [settings, setSettings] = useState<TerritorySettings>(DEFAULT_SETTINGS);
+  // true only once the user has explicitly saved settings at least once
+  const [settingsConfigured, setSettingsConfigured] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("restaurant");
   const [expandedMetros, setExpandedMetros] = useState<Set<string>>(new Set(["Warsaw"]));
   const [editing, setEditing] = useState<EditingEntry | null>(null);
@@ -407,7 +409,10 @@ export default function TerritoryPage() {
       fetch("/api/territory/settings").then(r => r.json()),
     ]).then(([entriesData, settingsData]: [TerritoryEntry[], TerritorySettings | null]) => {
       setEntries(Array.isArray(entriesData) ? entriesData : []);
-      if (settingsData) setSettings(settingsData);
+      if (settingsData) {
+        setSettings(settingsData);
+        setSettingsConfigured(true);
+      }
       setLoading(false);
     });
   }, []);
@@ -417,8 +422,8 @@ export default function TerritoryPage() {
     ? BUSINESS_CATEGORIES
     : BUSINESS_CATEGORIES.filter(c => settings.activeCategories.includes(c.value));
 
-  // Metro areas to display
-  const builtInMetros = settings.country === "Poland"
+  // Metro areas to display — empty until the user has saved settings at least once
+  const builtInMetros = settingsConfigured && settings.country === "Poland"
     ? Object.fromEntries(
         Object.entries(METRO_AREAS)
           .map(([metro, cities]) => [metro, cities.filter(c => !settings.excludedCities.includes(c))] as const)
@@ -426,7 +431,7 @@ export default function TerritoryPage() {
       )
     : {};
   const customMetrosMap: Record<string, string[]> = Object.fromEntries(
-    settings.customMetros.map(m => [m.name, m.cities])
+    (settingsConfigured ? settings.customMetros : []).map(m => [m.name, m.cities])
   );
   const allMetros = { ...builtInMetros, ...customMetrosMap };
 
@@ -459,6 +464,7 @@ export default function TerritoryPage() {
       method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings),
     });
     setSettings(newSettings);
+    setSettingsConfigured(true);
     // Reset category selection if current one is no longer visible
     const cats = newSettings.activeCategories.length === 0
       ? BUSINESS_CATEGORIES
@@ -471,6 +477,7 @@ export default function TerritoryPage() {
     await fetch("/api/territory/all", { method: "DELETE" });
     setEntries([]);
     setSettings(DEFAULT_SETTINGS);
+    setSettingsConfigured(false);
     setSelectedCategory("restaurant");
   };
 
@@ -559,8 +566,18 @@ export default function TerritoryPage() {
       ) : Object.keys(allMetros).length === 0 ? (
         <div className="text-center py-16 border border-dashed border-border rounded-xl">
           <MapPin className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm font-medium">No cities configured</p>
-          <p className="text-xs text-muted-foreground mt-1">Click <strong>Customize</strong> to add metro areas and cities.</p>
+          <p className="text-sm font-medium">{settingsConfigured ? "No cities configured" : "Set up your territory"}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {settingsConfigured
+              ? "Click Customize to add metro areas and cities."
+              : "Click Customize to choose your country and cities to track."}
+          </p>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            Customize
+          </button>
         </div>
       ) : (
         <div className="space-y-3">
