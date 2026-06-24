@@ -9,7 +9,7 @@ export default auth((req) => {
   const publicPaths = ["/login", "/register", "/privacy"];
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
 
-  if (!isAuth && !isPublic && !pathname.startsWith("/api/auth") && !pathname.startsWith("/api/instagram")) {
+  if (!isAuth && !isPublic && !pathname.startsWith("/api/auth") && !pathname.startsWith("/api/instagram") && !pathname.startsWith("/api/webhooks")) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
