@@ -39,15 +39,19 @@ export default function NewClientPage() {
         body: JSON.stringify(form),
       });
 
+      let body: { data?: { id: string }; error?: string } = {};
+      try { body = await res.json(); } catch { /* non-JSON response */ }
+
       if (!res.ok) {
-        const data = await res.json();
-        toast({ title: "Error", description: data.error, variant: "destructive" });
+        toast({ title: "Error", description: body.error ?? `Server error (${res.status})`, variant: "destructive" });
         return;
       }
 
-      const { data } = await res.json();
       toast({ title: "Client created!" });
-      router.push(`/clients/${data.id}`);
+      router.push(`/clients/${body.data!.id}`);
+    } catch (err) {
+      toast({ title: "Error", description: "Unexpected error. Check your connection.", variant: "destructive" });
+      console.error(err);
     } finally {
       setLoading(false);
     }

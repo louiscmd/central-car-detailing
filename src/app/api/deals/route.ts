@@ -23,6 +23,7 @@ export async function GET(req: Request) {
     },
     include: {
       stage: true,
+      activities: { orderBy: { createdAt: "desc" as const }, take: 1 },
       followUps: { where: { completed: false }, orderBy: { dueDate: "asc" }, take: 1 },
       _count: { select: { activities: true, followUps: true } },
     },
@@ -45,7 +46,6 @@ export async function POST(req: Request) {
       stageId,
       ...data,
     },
-    include: { stage: true, followUps: true, _count: { select: { activities: true, followUps: true } } },
   });
 
   await prisma.leadActivity.create({
@@ -55,5 +55,16 @@ export async function POST(req: Request) {
   const score = await calcScore(lead.id);
   await prisma.lead.update({ where: { id: lead.id }, data: { score } });
 
-  return NextResponse.json({ ...lead, score });
+  // Re-fetch with activities so the client gets a complete object
+  const full = await prisma.lead.findUnique({
+    where: { id: lead.id },
+    include: {
+      stage: true,
+      activities: { orderBy: { createdAt: "desc" as const }, take: 1 },
+      followUps: { where: { completed: false }, orderBy: { dueDate: "asc" }, take: 1 },
+      _count: { select: { activities: true, followUps: true } },
+    },
+  });
+
+  return NextResponse.json(full);
 }

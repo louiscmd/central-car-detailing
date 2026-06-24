@@ -550,7 +550,7 @@ function computeWarnings(leads: Lead[]): string[] {
     const stageName = lead.stage.name;
     const warning = STAGE_WARNINGS[stageName];
     if (!warning) continue;
-    const lastActivity = lead.activities[0];
+    const lastActivity = (lead.activities ?? [])[0];
     if (!lastActivity) continue;
     const days = daysBetween(lastActivity.createdAt);
     if (days >= warning.days) {
@@ -666,7 +666,11 @@ export default function DealsPage() {
 
   const addLead = async (data: typeof EMPTY_LEAD) => {
     const res = await fetch("/api/deals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-    if (res.ok) { const lead = await res.json(); setLeads(prev => [lead, ...prev]); }
+    if (!res.ok) return;
+    const lead = await res.json();
+    if (lead?.id) {
+      setLeads(prev => [{ activities: [], followUps: [], ...lead }, ...prev]);
+    }
     setShowAdd(false);
   };
 

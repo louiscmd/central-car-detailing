@@ -58,13 +58,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
-  const client = await prisma.client.create({
-    data: {
-      ...parsed.data,
-      userId: session.user.id,
-    },
-    include: { accounts: true },
-  });
-
-  return NextResponse.json({ data: client }, { status: 201 });
+  try {
+    const client = await prisma.client.create({
+      data: { ...parsed.data, userId: session.user.id },
+      include: { accounts: true },
+    });
+    return NextResponse.json({ data: client }, { status: 201 });
+  } catch (err) {
+    console.error("Client create error:", err);
+    return NextResponse.json({ error: "Failed to create client. Please try again." }, { status: 500 });
+  }
 }
