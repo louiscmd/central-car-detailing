@@ -19,6 +19,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
+        return token;
+      }
+      // On every token refresh (not fresh login), verify user still exists.
+      // Guards against stale JWTs after a DB wipe or account deletion.
+      if (token.id) {
+        const exists = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { id: true },
+        });
+        if (!exists) return null; // invalidates session → redirect to login
       }
       return token;
     },
