@@ -8,6 +8,9 @@
     },
     "src/app/api/webhooks/facebook/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/deals/import-facebook/route.ts": {
+      "maxDuration": 60
     }
   }
 }
