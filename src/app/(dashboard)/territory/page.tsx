@@ -42,11 +42,27 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
 function EntryModal({ entry, allCategories, onSave, onClose }: {
   entry: EditingEntry;
   allCategories: { value: string; label: string }[];
-  onSave: (e: EditingEntry) => void;
+  onSave: (e: EditingEntry) => Promise<void>;
   onClose: () => void;
 }) {
   const [form, setForm] = useState(entry);
-  const set = (k: keyof EditingEntry, v: string | number) => setForm(f => ({ ...f, [k]: v }));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const setNum = (k: keyof EditingEntry, v: string) => {
+    const n = v === "" ? 0 : Number(v);
+    if (!isNaN(n)) setForm(f => ({ ...f, [k]: n }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(form);
+    } catch {
+      setError("Failed to save. Please try again.");
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -67,19 +83,23 @@ function EntryModal({ entry, allCategories, onSave, onClose }: {
             <div key={key}>
               <label className="block text-xs text-muted-foreground mb-1">{label}</label>
               <input type="number" min={0} value={form[key] as number}
-                onChange={e => set(key, parseFloat(e.target.value) || 0)}
+                onChange={e => setNum(key, e.target.value)}
                 className="w-full bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
             </div>
           ))}
         </div>
         <div>
           <label className="block text-xs text-muted-foreground mb-1">Notes</label>
-          <textarea rows={2} value={form.notes ?? ""} onChange={e => set("notes", e.target.value)}
+          <textarea rows={2} value={form.notes ?? ""} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
             className="w-full bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none" />
         </div>
+        {error && <p className="text-xs text-red-500">{error}</p>}
         <div className="flex gap-2 justify-end">
           <button onClick={onClose} className="px-4 py-2 border border-border rounded-md text-sm hover:bg-accent">Cancel</button>
-          <button onClick={() => onSave(form)} className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90">Save</button>
+          <button onClick={handleSave} disabled={saving}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50">
+            {saving ? "Saving…" : "Save"}
+          </button>
         </div>
       </div>
     </div>
@@ -405,6 +425,7 @@ export default function TerritoryPage() {
     const res = await fetch("/api/territory", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form),
     });
+    if (!res.ok) throw new Error(await res.text());
     const saved: TerritoryEntry = await res.json();
     setEntries(prev => {
       const idx = prev.findIndex(e => e.city === saved.city && e.category === saved.category);
