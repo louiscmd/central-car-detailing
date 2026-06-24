@@ -45,6 +45,8 @@ model User {
   accounts          Account[]
   territoryEntries  TerritoryEntry[]
   territorySettings TerritorySettings?
+  pipelineStages    PipelineStage[]
+  leads             Lead[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -227,12 +229,119 @@ model TerritoryEntry {
   @@map("territory_entries")
 }
 
+enum LeadSource {
+  INSTAGRAM_DM
+  REFERRAL
+  COLD_CALL
+  EMAIL
+  WALK_IN
+  WEBSITE
+  OTHER
+}
+
+enum ActivityType {
+  CREATED
+  STAGE_CHANGED
+  NOTE_ADDED
+  FOLLOW_UP_SCHEDULED
+  FOLLOW_UP_COMPLETED
+  DM_SENT
+  CALLED
+  EMAILED
+  MEETING_HELD
+  PROPOSAL_SENT
+  CONTRACT_SENT
+  WON
+  LOST
+}
+
+enum FollowUpPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model PipelineStage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int
+  color     String   @default("#6366f1")
+  leads     Lead[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, position])
+  @@map("pipeline_stages")
+}
+
+model Lead {
+  id               String        @id @default(cuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stageId          String
+  stage            PipelineStage @relation(fields: [stageId], references: [id])
+  businessName     String
+  category         String?
+  city             String?
+  contactName      String?
+  instagram        String?
+  phone            String?
+  email            String?
+  website          String?
+  notes            String?       @db.Text
+  source           LeadSource    @default(OTHER)
+  score            Int           @default(0)
+  expectedRetainer Float         @default(0)
+  setupFee         Float         @default(0)
+  closeProbability Float         @default(0.5)
+  activities       LeadActivity[]
+  followUps        FollowUp[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([userId, stageId])
+  @@map("leads")
+}
+
+model LeadActivity {
+  id        String       @id @default(cuid())
+  leadId    String
+  lead      Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      ActivityType
+  note      String?      @db.Text
+  metadata  Json?
+  createdAt DateTime     @default(now())
+
+  @@index([leadId, createdAt])
+  @@map("lead_activities")
+}
+
+model FollowUp {
+  id          String           @id @default(cuid())
+  leadId      String
+  lead        Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  dueDate     DateTime
+  priority    FollowUpPriority @default(MEDIUM)
+  note        String?          @db.Text
+  completed   Boolean          @default(false)
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([leadId, dueDate])
+  @@map("follow_ups")
+}
+
 model TerritorySettings {
   id               String   @id @default(cuid())
   userId           String   @unique
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   country          String   @default("Poland")
   activeCategories String[] @default([])
+  excludedCities   String[] @default([])
   customMetros     Json     @default("[]")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

@@ -14,6 +14,7 @@ import {
   Download,
   TrendingUp,
   MapPin,
+  Kanban,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/reports", label: "Reports", icon: FileText },
+  { href: "/deals", label: "Deal Tracker", icon: Kanban },
   { href: "/revenue-estimator", label: "Revenue Estimator", icon: TrendingUp },
   { href: "/territory", label: "Territory Tracker", icon: MapPin },
   { href: "/settings", label: "Settings", icon: Settings },
