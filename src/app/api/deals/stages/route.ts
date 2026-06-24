@@ -15,14 +15,14 @@ export async function GET() {
 
   if (stages.length === 0) {
     const userId = session.user.id;
-    stages = await prisma.$transaction(
-      DEFAULT_STAGES.map(s =>
-        prisma.pipelineStage.create({
-          data: { userId, ...s },
-          include: { _count: { select: { leads: true } } },
-        })
-      )
-    );
+    await prisma.pipelineStage.createMany({
+      data: DEFAULT_STAGES.map(s => ({ userId, ...s })),
+    });
+    stages = await prisma.pipelineStage.findMany({
+      where: { userId },
+      orderBy: { position: "asc" },
+      include: { _count: { select: { leads: true } } },
+    });
   }
 
   return NextResponse.json(stages);
