@@ -14,6 +14,7 @@ export const DEFAULT_STAGES = [
 
 export const LEAD_SOURCES = [
   { value: "INSTAGRAM_DM", label: "Instagram DM" },
+  { value: "FACEBOOK_MESSAGE", label: "Facebook Message" },
   { value: "REFERRAL", label: "Referral" },
   { value: "COLD_CALL", label: "Cold Call" },
   { value: "EMAIL", label: "Email" },

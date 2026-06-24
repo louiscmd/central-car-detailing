@@ -5,6 +5,9 @@
     },
     "src/app/api/instagram/callback/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/webhooks/facebook/route.ts": {
+      "maxDuration": 60
     }
   }
 }

@@ -231,6 +231,7 @@ model TerritoryEntry {
 
 enum LeadSource {
   INSTAGRAM_DM
+  FACEBOOK_MESSAGE
   REFERRAL
   COLD_CALL
   EMAIL
