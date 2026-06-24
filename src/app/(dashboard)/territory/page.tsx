@@ -106,16 +106,18 @@ function EntryModal({ entry, allCategories, onSave, onClose }: {
   );
 }
 
-function SettingsModal({ settings, onSave, onClose }: {
+function SettingsModal({ settings, onSave, onClose, onReset }: {
   settings: TerritorySettings;
   onSave: (s: TerritorySettings) => void;
   onClose: () => void;
+  onReset: () => Promise<void>;
 }) {
   const [form, setForm] = useState<TerritorySettings>(settings);
   const [newMetroName, setNewMetroName] = useState("");
   const [newCityInput, setNewCityInput] = useState<Record<string, string>>({});
   const [cityDropdownOpen, setCityDropdownOpen] = useState<string | null>(null);
   const [editingMetro, setEditingMetro] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   const toggleCategory = (val: string) => {
     setForm(f => ({
@@ -362,9 +364,27 @@ function SettingsModal({ settings, onSave, onClose }: {
           </div>
         </div>
 
-        <div className="flex gap-2 justify-end pt-2 border-t border-border">
-          <button onClick={onClose} className="px-4 py-2 border border-border rounded-md text-sm hover:bg-accent">Cancel</button>
-          <button onClick={() => onSave(form)} className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90">Save Settings</button>
+        <div className="pt-2 border-t border-border space-y-3">
+          <div className="flex gap-2 justify-end">
+            <button onClick={onClose} className="px-4 py-2 border border-border rounded-md text-sm hover:bg-accent">Cancel</button>
+            <button onClick={() => onSave(form)} className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90">Save Settings</button>
+          </div>
+          <div className="border-t border-border pt-3">
+            <p className="text-xs text-muted-foreground mb-2">Danger zone</p>
+            <button
+              disabled={resetting}
+              onClick={async () => {
+                if (!confirm("Delete all territory entries and settings? This cannot be undone.")) return;
+                setResetting(true);
+                await onReset();
+                setResetting(false);
+                onClose();
+              }}
+              className="w-full px-4 py-2 border border-destructive text-destructive rounded-md text-sm hover:bg-destructive/10 disabled:opacity-50 transition-colors"
+            >
+              {resetting ? "Clearing…" : "Reset all territory data"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -445,6 +465,13 @@ export default function TerritoryPage() {
       : BUSINESS_CATEGORIES.filter(c => newSettings.activeCategories.includes(c.value));
     if (!cats.find(c => c.value === selectedCategory)) setSelectedCategory(cats[0]?.value ?? "restaurant");
     setShowSettings(false);
+  };
+
+  const resetAllData = async () => {
+    await fetch("/api/territory/all", { method: "DELETE" });
+    setEntries([]);
+    setSettings(DEFAULT_SETTINGS);
+    setSelectedCategory("restaurant");
   };
 
   const toggleMetro = (metro: string) => {
@@ -616,7 +643,7 @@ export default function TerritoryPage() {
       )}
 
       {editing && <EntryModal entry={editing} allCategories={BUSINESS_CATEGORIES} onSave={saveEntry} onClose={() => setEditing(null)} />}
-      {showSettings && <SettingsModal settings={settings} onSave={saveSettings} onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsModal settings={settings} onSave={saveSettings} onClose={() => setShowSettings(false)} onReset={resetAllData} />}
     </div>
   );
 }
