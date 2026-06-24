@@ -601,11 +601,14 @@ export default function DealsPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const loadAll = useCallback(async () => {
-    const [sRes, lRes] = await Promise.all([fetch("/api/deals/stages"), fetch("/api/deals")]);
-    const [s, l] = await Promise.all([sRes.json(), lRes.json()]);
-    setStages(s);
-    setLeads(l);
-    setLoading(false);
+    try {
+      const [sRes, lRes] = await Promise.all([fetch("/api/deals/stages"), fetch("/api/deals")]);
+      const [s, l] = await Promise.all([sRes.json(), lRes.json()]);
+      setStages(Array.isArray(s) ? s : []);
+      setLeads(Array.isArray(l) ? l : []);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
@@ -670,8 +673,21 @@ export default function DealsPage() {
   const activeDragLead = activeId ? leads.find(l => l.id === activeId) : null;
 
   if (loading) return (
-    <div className="p-8 flex items-center justify-center h-full">
-      <div className="text-muted-foreground text-sm">Loading pipeline…</div>
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="px-6 py-4 border-b border-border shrink-0">
+        <div className="h-6 w-32 bg-muted animate-pulse rounded" />
+        <div className="h-3 w-48 bg-muted animate-pulse rounded mt-2" />
+      </div>
+      <div className="flex gap-4 p-6 overflow-x-auto flex-1">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="w-64 shrink-0 bg-card border border-border rounded-xl p-3 space-y-2">
+            <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+            {Array.from({ length: i % 2 === 0 ? 2 : 1 }).map((_, j) => (
+              <div key={j} className="h-20 bg-muted/50 animate-pulse rounded-lg" />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 
