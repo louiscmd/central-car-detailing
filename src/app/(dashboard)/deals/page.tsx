@@ -12,13 +12,14 @@ import {
   Plus, X, ChevronRight, Bell, AlertTriangle, CheckCircle2,
   Phone, Mail, Instagram, Globe, MapPin, Building2, Calendar,
   TrendingUp, Users, Target, Award, Clock, Edit2, Trash2, Check,
-  ChevronDown, Filter, Search,
+  ChevronDown, Filter, Search, Upload,
 } from "lucide-react";
 import {
   LEAD_SOURCES, ACTIVITY_LABELS, ACTIVITY_ICONS, PRIORITY_LABELS, PRIORITY_COLORS,
   calcExpectedValue, scoreLabel, scoreBadgeClass, formatRelative, formatDueDate, daysBetween, STAGE_WARNINGS,
 } from "@/lib/deal-utils";
 import { BUSINESS_CATEGORIES } from "@/lib/territory-data";
+import { ImportFacebookModal } from "@/components/deals/ImportFacebookModal";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -597,6 +598,7 @@ export default function DealsPage() {
   const [filterCity, setFilterCity] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showAttention, setShowAttention] = useState(true);
+  const [showImport, setShowImport] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -708,6 +710,11 @@ export default function DealsPage() {
           <button onClick={() => setShowFilters(f => !f)}
             className={`p-1.5 rounded-md border transition-colors ${showFilters ? "border-primary text-primary bg-primary/10" : "border-border hover:bg-accent"}`}>
             <Filter className="w-4 h-4" />
+          </button>
+          <button onClick={() => setShowImport(true)}
+            title="Re-import from Facebook export"
+            className="p-1.5 rounded-md border border-border hover:bg-accent transition-colors">
+            <Upload className="w-4 h-4" />
           </button>
           <button onClick={() => setShowAdd(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90">
@@ -847,6 +854,9 @@ export default function DealsPage() {
       {/* Modals */}
       {showAdd && (
         <LeadFormModal stages={stages} onSave={addLead} onClose={() => setShowAdd(false)} />
+      )}
+      {showImport && (
+        <ImportFacebookModal onClose={() => setShowImport(false)} onDone={loadAll} />
       )}
       {selectedLead && (
         <LeadDrawer

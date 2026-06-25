@@ -459,80 +459,94 @@ export default function TasksPage() {
 
   const allTasks = [...ungrouped, ...groups.flatMap(g => g.tasks)];
 
-  const addTask = useCallback(async (title: string, groupId?: string) => {
-    if (!title.trim()) return;
-    const res = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: title.trim(), groupId }),
-    });
-    const task: Task = await res.json();
-    if (groupId) {
-      setGroups(gs => gs.map(g => g.id === groupId ? { ...g, tasks: [...g.tasks, task] } : g));
-    } else {
-      setUngrouped(prev => [...prev, task]);
-    }
-  }, []);
-
+  // Optimistic helpers — update UI immediately, sync to server in background
   const updateTask = useCallback((id: string, patch: Partial<Task>) => {
     const applyPatch = (t: Task) => t.id === id ? { ...t, ...patch } : t;
     setUngrouped(prev => prev.map(applyPatch));
     setGroups(gs => gs.map(g => ({ ...g, tasks: g.tasks.map(applyPatch) })));
   }, []);
 
-  const toggleTask = useCallback(async (task: Task) => {
-    await fetch(`/api/tasks/${task.id}`, {
+  const replaceTask = useCallback((tempId: string, real: Task) => {
+    const replace = (t: Task) => t.id === tempId ? real : t;
+    setUngrouped(prev => prev.map(replace));
+    setGroups(gs => gs.map(g => ({ ...g, tasks: g.tasks.map(replace) })));
+  }, []);
+
+  const addTask = useCallback(async (title: string, groupId?: string) => {
+    if (!title.trim()) return;
+    const tempId = `temp-${Date.now()}`;
+    const tempTask: Task = { id: tempId, title: title.trim(), completed: false, groupId: groupId ?? null, position: 9999 };
+    // Show immediately
+    if (groupId) {
+      setGroups(gs => gs.map(g => g.id === groupId ? { ...g, tasks: [...g.tasks, tempTask] } : g));
+    } else {
+      setUngrouped(prev => [...prev, tempTask]);
+    }
+    // Persist and swap real ID in
+    const res = await fetch("/api/tasks", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: title.trim(), groupId }),
+    });
+    const task: Task = await res.json();
+    replaceTask(tempId, task);
+  }, [replaceTask]);
+
+  const toggleTask = useCallback((task: Task) => {
+    updateTask(task.id, { completed: !task.completed }); // instant
+    fetch(`/api/tasks/${task.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completed: !task.completed }),
     });
-    updateTask(task.id, { completed: !task.completed });
   }, [updateTask]);
 
-  const deleteTask = useCallback(async (task: Task) => {
-    await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
-    setUngrouped(prev => prev.filter(t => t.id !== task.id));
+  const deleteTask = useCallback((task: Task) => {
+    setUngrouped(prev => prev.filter(t => t.id !== task.id)); // instant
     setGroups(gs => gs.map(g => ({ ...g, tasks: g.tasks.filter(t => t.id !== task.id) })));
+    fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
   }, []);
 
-  const renameTask = useCallback(async (task: Task, title: string) => {
-    await fetch(`/api/tasks/${task.id}`, {
+  const renameTask = useCallback((task: Task, title: string) => {
+    updateTask(task.id, { title }); // instant
+    fetch(`/api/tasks/${task.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
     });
-    updateTask(task.id, { title });
   }, [updateTask]);
 
-  const scheduleTask = useCallback(async (task: Task, start: string | null, end: string | null) => {
-    await fetch(`/api/tasks/${task.id}`, {
+  const scheduleTask = useCallback((task: Task, start: string | null, end: string | null) => {
+    updateTask(task.id, { scheduledStart: start, scheduledEnd: end }); // instant
+    fetch(`/api/tasks/${task.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scheduledStart: start, scheduledEnd: end }),
     });
-    updateTask(task.id, { scheduledStart: start, scheduledEnd: end });
   }, [updateTask]);
 
   const addGroup = useCallback(async () => {
     if (!newGroup.trim()) return;
+    const tempId = `temp-group-${Date.now()}`;
+    const tempGroup: TaskGroup = { id: tempId, name: newGroup.trim(), position: 9999, tasks: [] };
+    setGroups(prev => [...prev, tempGroup]); // instant
+    setNewGroup("");
     const res = await fetch("/api/tasks/groups", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newGroup.trim() }),
+      body: JSON.stringify({ name: tempGroup.name }),
     });
     const group: TaskGroup = await res.json();
-    setGroups(prev => [...prev, group]);
-    setNewGroup("");
+    setGroups(gs => gs.map(g => g.id === tempId ? { ...group, tasks: [] } : g));
   }, [newGroup]);
 
-  const renameGroup = useCallback(async (id: string, name: string) => {
-    await fetch(`/api/tasks/groups/${id}`, {
+  const renameGroup = useCallback((id: string, name: string) => {
+    setGroups(gs => gs.map(g => g.id === id ? { ...g, name } : g)); // instant
+    setEditingGroupId(null);
+    fetch(`/api/tasks/groups/${id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
-    setGroups(gs => gs.map(g => g.id === id ? { ...g, name } : g));
-    setEditingGroupId(null);
   }, []);
 
-  const deleteGroup = useCallback(async (id: string) => {
-    await fetch(`/api/tasks/groups/${id}`, { method: "DELETE" });
-    setGroups(gs => gs.filter(g => g.id !== id));
+  const deleteGroup = useCallback((id: string) => {
+    setGroups(gs => gs.filter(g => g.id !== id)); // instant
+    fetch(`/api/tasks/groups/${id}`, { method: "DELETE" });
   }, []);
 
   const taskProps = (task: Task) => ({
