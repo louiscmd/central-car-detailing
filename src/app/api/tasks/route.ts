@@ -25,7 +25,13 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json() as { title: string; groupId?: string; dueDate?: string };
+  const body = await req.json() as {
+    title: string;
+    groupId?: string;
+    dueDate?: string;
+    scheduledStart?: string;
+    scheduledEnd?: string;
+  };
 
   const count = await prisma.task.count({
     where: { userId: session.user.id, groupId: body.groupId ?? null },
@@ -37,6 +43,8 @@ export async function POST(req: Request) {
       title: body.title,
       groupId: body.groupId ?? null,
       dueDate: body.dueDate ? new Date(body.dueDate) : null,
+      scheduledStart: body.scheduledStart ? new Date(body.scheduledStart) : null,
+      scheduledEnd: body.scheduledEnd ? new Date(body.scheduledEnd) : null,
       position: count,
     },
   });
