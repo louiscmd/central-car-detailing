@@ -570,8 +570,8 @@ export default function TasksPage() {
           <div className="flex-1 overflow-y-auto space-y-3 pr-1">
             {/* Ungrouped */}
             {ungrouped.length > 0 && (
-              <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="px-3 py-2 border-b border-border flex items-center gap-2">
+              <div className="bg-card border border-border rounded-xl">
+                <div className="px-3 py-2 border-b border-border flex items-center gap-2 rounded-t-xl">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex-1">General</span>
                   <span className="text-xs text-muted-foreground">{ungrouped.filter(t => t.completed).length}/{ungrouped.length}</span>
                 </div>
@@ -586,7 +586,7 @@ export default function TasksPage() {
               const done = group.tasks.filter(t => t.completed).length;
               const isCollapsed = collapsed.has(group.id);
               return (
-                <div key={group.id} className="bg-card border border-border rounded-xl overflow-hidden">
+                <div key={group.id} className="bg-card border border-border rounded-xl">
                   <div className="px-3 py-2.5 border-b border-border flex items-center gap-2 group/header">
                     <button onClick={() => setCollapsed(prev => { const n = new Set(prev); n.has(group.id) ? n.delete(group.id) : n.add(group.id); return n; })}
                       className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
