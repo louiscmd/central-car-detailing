@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getMonthlyAnalytics, getDashboardStats } from "@/lib/analytics";
+import { getMonthlyAnalytics, getDashboardStats, get7DayViewsForAccount } from "@/lib/analytics";
 import { currentMonthYear } from "@/lib/utils";
 
 export async function GET(req: Request) {
@@ -37,6 +37,9 @@ export async function GET(req: Request) {
   const m = monthParam ? parseInt(monthParam) : month;
   const y = yearParam ? parseInt(yearParam) : year;
 
-  const analytics = await getMonthlyAnalytics(accountId, m, y);
-  return NextResponse.json({ data: analytics });
+  const [analytics, weekViews] = await Promise.all([
+    getMonthlyAnalytics(accountId, m, y),
+    get7DayViewsForAccount(accountId),
+  ]);
+  return NextResponse.json({ data: { ...analytics, weekViews } });
 }

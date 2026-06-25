@@ -1,5 +1,11 @@
 import { BaseScraper } from "./base";
-import type { ScrapeResult } from "@/types";
+import type { ScrapeResult, ScrapedPost, PostType } from "@/types";
+
+function mapIgType(t: string): PostType {
+  const u = t?.toUpperCase() ?? "";
+  if (u.includes("VIDEO") || u.includes("REEL")) return "REEL";
+  return "POST";
+}
 
 export class InstagramScraper extends BaseScraper {
   // accessToken  = this account's own connected token (direct scrape via Graph API)
@@ -72,6 +78,20 @@ export class InstagramScraper extends BaseScraper {
       const followers = (u.followersCount as number) ?? null;
       if (followers === null) return { success: false, error: "Apify: no follower count" };
 
+      const rawPosts = (u.latestPosts as Record<string, unknown>[]) ?? [];
+      const posts: ScrapedPost[] = rawPosts.map((p) => ({
+        externalId: (p.shortCode as string) ?? String(p.id),
+        url: (p.url as string) ?? `https://www.instagram.com/p/${p.shortCode}/`,
+        type: mapIgType(p.type as string),
+        caption: (p.caption as string) ?? null,
+        thumbnailUrl: (p.displayUrl as string) ?? (p.thumbnailUrl as string) ?? null,
+        postedAt: p.timestamp ? new Date(p.timestamp as string) : null,
+        views: (p.videoViewCount as number) ?? (p.videoPlayCount as number) ?? null,
+        likes: (p.likesCount as number) ?? null,
+        comments: (p.commentsCount as number) ?? null,
+        shares: null,
+      }));
+
       return {
         success: true,
         profile: {
@@ -83,7 +103,7 @@ export class InstagramScraper extends BaseScraper {
           totalLikes: null,
           postCount: (u.postsCount as number) ?? null,
         },
-        posts: [],
+        posts,
       };
     } catch (e) {
       return { success: false, error: `Apify error: ${e instanceof Error ? e.message : String(e)}` };

@@ -1,5 +1,5 @@
 import { BaseScraper } from "./base";
-import type { ScrapeResult } from "@/types";
+import type { ScrapeResult, ScrapedPost } from "@/types";
 
 export class TikTokScraper extends BaseScraper {
   async scrape(profileUrl: string): Promise<ScrapeResult> {
@@ -34,6 +34,7 @@ export class TikTokScraper extends BaseScraper {
     let postCount: number | null = null;
     let displayName: string | null = null;
     let avatarUrl: string | null = null;
+    const posts: ScrapedPost[] = [];
 
     // TikTok embeds data in __UNIVERSAL_DATA_FOR_REHYDRATION__ script
     const universalMatch = html.match(/<script[^>]*id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/);
@@ -54,6 +55,28 @@ export class TikTokScraper extends BaseScraper {
         if (userDetail) {
           displayName = userDetail.nickname ?? null;
           avatarUrl = userDetail.avatarLarger ?? userDetail.avatarMedium ?? null;
+        }
+
+        // Extract video list
+        const itemList: Record<string, unknown>[] =
+          json?.["__DEFAULT_SCOPE__"]?.["webapp.user-detail"]?.itemList ?? [];
+        for (const item of itemList) {
+          const s = (item.stats as Record<string, number>) ?? {};
+          const v = (item.video as Record<string, unknown>) ?? {};
+          const id = String(item.id ?? "");
+          if (!id) continue;
+          posts.push({
+            externalId: id,
+            url: `https://www.tiktok.com/@${username}/video/${id}`,
+            type: "VIDEO",
+            caption: (item.desc as string) ?? null,
+            thumbnailUrl: (v.cover as string) ?? (v.originCover as string) ?? null,
+            postedAt: item.createTime ? new Date((item.createTime as number) * 1000) : null,
+            views: s.playCount ?? null,
+            likes: s.diggCount ?? null,
+            comments: s.commentCount ?? null,
+            shares: s.shareCount ?? null,
+          });
         }
       } catch { /* continue to fallback */ }
     }
@@ -108,7 +131,7 @@ export class TikTokScraper extends BaseScraper {
     return {
       success: true,
       profile: { username, displayName, avatarUrl, followers, following, totalLikes, postCount },
-      posts: [],
+      posts,
     };
   }
 }

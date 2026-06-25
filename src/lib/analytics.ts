@@ -290,6 +290,96 @@ export async function getDashboardStats(userId: string) {
   };
 }
 
+/** Returns Mon-Sun of the current calendar week. */
+function currentWeekDays(): Date[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dow = today.getDay(); // 0=Sun … 6=Sat
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((dow + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
+async function weekViewsForPosts(
+  posts: { metrics: { timestamp: Date; views: bigint | null }[] }[]
+): Promise<TimelinePoint[]> {
+  const days = currentWeekDays();
+  const monday = days[0];
+  const sunday = days[6];
+  const end = new Date(sunday);
+  end.setHours(23, 59, 59, 999);
+
+  return days.map((day) => {
+    const dayStr = format(day, "MMM d");
+    let dayViews = 0;
+    for (const post of posts) {
+      const dayMetric = post.metrics.find(
+        (m) =>
+          m.timestamp >= monday &&
+          m.timestamp <= end &&
+          format(m.timestamp, "yyyy-MM-dd") === format(day, "yyyy-MM-dd")
+      );
+      if (dayMetric) dayViews += bigIntToNumber(dayMetric.views) ?? 0;
+    }
+    return { date: dayStr, value: dayViews };
+  });
+}
+
+export async function get7DayViewsGlobal(userId: string): Promise<TimelinePoint[]> {
+  const days = currentWeekDays();
+  const since = days[0];
+
+  const posts = await prisma.post.findMany({
+    where: { account: { client: { userId } } },
+    include: {
+      metrics: {
+        where: { timestamp: { gte: since } },
+        orderBy: { timestamp: "asc" },
+      },
+    },
+  });
+
+  return weekViewsForPosts(posts);
+}
+
+export async function get7DayViewsForClient(clientId: string): Promise<TimelinePoint[]> {
+  const days = currentWeekDays();
+  const since = days[0];
+
+  const posts = await prisma.post.findMany({
+    where: { account: { clientId } },
+    include: {
+      metrics: {
+        where: { timestamp: { gte: since } },
+        orderBy: { timestamp: "asc" },
+      },
+    },
+  });
+
+  return weekViewsForPosts(posts);
+}
+
+export async function get7DayViewsForAccount(accountId: string): Promise<TimelinePoint[]> {
+  const days = currentWeekDays();
+  const since = days[0];
+
+  const posts = await prisma.post.findMany({
+    where: { accountId },
+    include: {
+      metrics: {
+        where: { timestamp: { gte: since } },
+        orderBy: { timestamp: "asc" },
+      },
+    },
+  });
+
+  return weekViewsForPosts(posts);
+}
+
 export async function getFollowerGrowthTrend(
   accountId: string,
   days: number = 30

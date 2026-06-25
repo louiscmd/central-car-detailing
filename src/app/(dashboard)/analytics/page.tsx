@@ -15,10 +15,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { FollowerChart } from "@/components/analytics/follower-chart";
 import { EngagementChart } from "@/components/analytics/engagement-chart";
+import { ViewsChart } from "@/components/dashboard/views-chart";
 import { PlatformBadge } from "@/components/clients/platform-badge";
 import { formatNumber, formatPercent, platformLabel, currentMonthYear, formatMonthYear } from "@/lib/utils";
 import { Users, TrendingUp, Eye, Heart } from "lucide-react";
-import type { MonthlyAnalytics, Platform } from "@/types";
+import type { MonthlyAnalytics, TimelinePoint, Platform } from "@/types";
 
 interface ClientOption {
   id: string;
@@ -33,7 +34,7 @@ export default function AnalyticsPage() {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [selectedClientId, setSelectedClientId] = useState(defaultClientId);
   const [selectedAccountId, setSelectedAccountId] = useState("");
-  const [analytics, setAnalytics] = useState<MonthlyAnalytics | null>(null);
+  const [analytics, setAnalytics] = useState<(MonthlyAnalytics & { weekViews: TimelinePoint[] }) | null>(null);
   const [loading, setLoading] = useState(false);
   const { month, year } = currentMonthYear();
   const [selectedMonth, setSelectedMonth] = useState(month);
@@ -195,10 +196,10 @@ export default function AnalyticsPage() {
               data={analytics.followersTimeline}
               title="Follower Growth"
             />
-            <EngagementChart
-              data={analytics.viewsTimeline}
-              title="Daily Views Snapshot"
-            />
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-sm font-semibold mb-4">Views This Week (Mon–Sun)</p>
+              <ViewsChart data={analytics.weekViews} height={200} />
+            </div>
           </div>
 
           {/* Top Posts */}

@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ViewsChart } from "@/components/dashboard/views-chart";
+import type { TimelinePoint } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -69,6 +71,7 @@ export default function ClientDetailPage() {
   const router = useRouter();
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewsData, setViewsData] = useState<TimelinePoint[]>([]);
   const [scraping, setScraping] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [scrapingAccount, setScrapingAccount] = useState<string | null>(null);
@@ -80,11 +83,15 @@ export default function ClientDetailPage() {
   });
 
   async function fetchClient() {
-    const res = await fetch(`/api/clients/${id}`);
-    if (!res.ok) { router.push("/clients"); return; }
-    const { data } = await res.json();
+    const [clientRes, viewsRes] = await Promise.all([
+      fetch(`/api/clients/${id}`),
+      fetch(`/api/clients/${id}/views`),
+    ]);
+    if (!clientRes.ok) { router.push("/clients"); return; }
+    const { data } = await clientRes.json();
     setClient(data);
     setLoading(false);
+    if (viewsRes.ok) setViewsData(await viewsRes.json());
   }
 
   useEffect(() => { fetchClient(); }, [id]);
@@ -420,6 +427,16 @@ export default function ClientDetailPage() {
               })}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* 7-day views chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Views — Last 7 Days</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ViewsChart data={viewsData} height={180} />
         </CardContent>
       </Card>
     </div>
