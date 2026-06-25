@@ -141,11 +141,11 @@ export default function RevenueEstimatorPage() {
       </div>
 
       {/* Client selector */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <select
           value={selectedClientId}
           onChange={e => setSelectedClientId(e.target.value)}
-          className="bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          className="flex-1 sm:flex-none min-w-0 bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
         >
           <option value="">Select a client…</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
