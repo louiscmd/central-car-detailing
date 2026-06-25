@@ -495,7 +495,7 @@ export default function TerritoryPage() {
   const totalBusinesses = entries.filter(e => e.category === selectedCategory).reduce((s, e) => s + e.totalBusinesses, 0);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">Territory Tracker</h1>
