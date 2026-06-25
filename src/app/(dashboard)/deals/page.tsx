@@ -673,7 +673,7 @@ export default function DealsPage() {
   const activeDragLead = activeId ? leads.find(l => l.id === activeId) : null;
 
   if (loading) return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full -m-6 overflow-hidden">
       <div className="px-6 py-4 border-b border-border shrink-0">
         <div className="h-6 w-32 bg-muted animate-pulse rounded" />
         <div className="h-3 w-48 bg-muted animate-pulse rounded mt-2" />
@@ -692,15 +692,15 @@ export default function DealsPage() {
   );
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full -m-6 overflow-hidden">
       {/* Top bar */}
-      <div className="px-6 py-4 border-b border-border flex items-center justify-between gap-4 shrink-0">
-        <div>
+      <div className="px-4 sm:px-6 py-4 border-b border-border flex items-center justify-between gap-2 shrink-0">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold">Deal Tracker</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">{leads.length} leads · {fmt(stats.pipelineValue)} pipeline</p>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">{leads.length} leads · {fmt(stats.pipelineValue)} pipeline</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative hidden sm:block">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search leads…"
               className="pl-8 pr-3 py-1.5 bg-muted/30 border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary w-52" />
@@ -711,21 +711,32 @@ export default function DealsPage() {
           </button>
           <button onClick={() => setShowAdd(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90">
-            <Plus className="w-4 h-4" /> Add Lead
+            <Plus className="w-4 h-4" /><span className="hidden sm:inline">Add Lead</span>
           </button>
         </div>
       </div>
 
+      {/* Mobile search row — shown when filters open */}
+      {showFilters && (
+        <div className="px-4 pt-3 sm:hidden">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search leads…"
+              className="w-full pl-8 pr-3 py-1.5 bg-muted/30 border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       {showFilters && (
-        <div className="px-6 py-3 border-b border-border flex items-center gap-3 bg-muted/20 shrink-0">
+        <div className="px-4 sm:px-6 py-3 border-b border-border flex flex-wrap items-center gap-2 bg-muted/20 shrink-0">
           <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
-            className="bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            className="flex-1 sm:flex-none bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
             <option value="">All categories</option>
             {BUSINESS_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
           <input value={filterCity} onChange={e => setFilterCity(e.target.value)} placeholder="Filter by city…"
-            className="bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary w-40" />
+            className="flex-1 sm:w-40 bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
           {(filterCategory || filterCity) && (
             <button onClick={() => { setFilterCategory(""); setFilterCity(""); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
           )}
