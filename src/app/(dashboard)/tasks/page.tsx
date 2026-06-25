@@ -447,6 +447,7 @@ export default function TasksPage() {
   const [groupTaskInput, setGroupTaskInput] = useState("");
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingGroupName, setEditingGroupName] = useState("");
+  const [activeTab, setActiveTab] = useState<"checklist" | "schedule">("checklist");
 
   useEffect(() => {
     fetch("/api/tasks").then(r => r.json()).then(data => {
@@ -543,10 +544,24 @@ export default function TasksPage() {
   });
 
   return (
-    <div className="flex gap-0 h-full -m-6 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-full -m-6 overflow-hidden">
+
+      {/* ── Mobile tab bar ──────────────────────────────────── */}
+      <div className="flex md:hidden border-b border-border shrink-0 bg-card">
+        <button
+          onClick={() => setActiveTab("checklist")}
+          className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors border-b-2 ${activeTab === "checklist" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>
+          <CheckSquare className="w-4 h-4" /> Checklist
+        </button>
+        <button
+          onClick={() => setActiveTab("schedule")}
+          className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors border-b-2 ${activeTab === "schedule" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>
+          <Calendar className="w-4 h-4" /> Schedule
+        </button>
+      </div>
 
       {/* ── LEFT: Daily Checklist ───────────────────────────── */}
-      <div className="w-1/2 flex flex-col border-r border-border p-6 min-h-0">
+      <div className={`flex-col border-r border-border p-6 min-h-0 md:flex md:w-1/2 ${activeTab === "checklist" ? "flex flex-1 md:flex-none" : "hidden"}`}>
         <div className="flex items-center gap-2 mb-4 shrink-0">
           <CheckSquare className="w-5 h-5 text-primary" />
           <h1 className="text-xl font-semibold">Daily Checklist</h1>
@@ -653,7 +668,7 @@ export default function TasksPage() {
       </div>
 
       {/* ── RIGHT: Daily Schedule ───────────────────────────── */}
-      <div className="w-1/2 flex flex-col p-6 min-h-0">
+      <div className={`flex-col p-6 min-h-0 md:flex md:w-1/2 ${activeTab === "schedule" ? "flex flex-1 md:flex-none" : "hidden"}`}>
         <DayCalendar
           date={calendarDate}
           tasks={allTasks}
