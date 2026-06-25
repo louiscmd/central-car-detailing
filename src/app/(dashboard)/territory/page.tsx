@@ -551,11 +551,11 @@ export default function TerritoryPage() {
           { label: "Market Penetration", value: `${penetration(totalContacted, totalBusinesses)}%`, icon: MapPin },
         ].map(({ label, value, icon: Icon }) => (
           <div key={label} className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-2">
               <Icon className="w-4 h-4 text-primary" />
               <span className="text-xs text-muted-foreground">{label}</span>
             </div>
-            <p className="text-xl font-bold">{value}</p>
+            <p className="text-2xl font-bold">{value}</p>
           </div>
         ))}
       </div>
@@ -598,7 +598,7 @@ export default function TerritoryPage() {
             return (
               <div key={metro} className="bg-card border border-border rounded-xl overflow-hidden">
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-4 py-4 hover:bg-accent/50 transition-colors text-left"
                   onClick={() => toggleMetro(metro)}>
                   {expanded ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
                   <MapPin className="w-4 h-4 text-primary shrink-0" />
@@ -621,35 +621,31 @@ export default function TerritoryPage() {
                       const satColor = pct >= 70 ? "text-red-500" : pct >= 30 ? "text-amber-500" : entry?.contacted ? "text-blue-500" : "text-green-500";
 
                       return (
-                        <div key={city} className="px-4 py-3 space-y-2">
+                        <div key={city} className="px-4 py-4">
                           <div className="flex items-center gap-3">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{city}</p>
-                              <p className={`text-xs ${satColor}`}>{saturation}</p>
+                              <p className="text-sm font-semibold truncate">{city}</p>
+                              <p className={`text-xs mt-0.5 ${satColor}`}>{saturation}</p>
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
-                              {entry ? (
-                                <>
-                                  <span>{entry.contacted}/{entry.totalBusinesses}</span>
-                                  <span className="text-green-500 font-medium">{entry.clientsWon} won</span>
-                                  {entry.mrr > 0 && <span className="hidden sm:inline">{Math.round(entry.mrr).toLocaleString("pl-PL")} PLN</span>}
-                                </>
-                              ) : (
-                                <span className="text-muted-foreground/50">No data</span>
-                              )}
-                            </div>
+                            {entry ? (
+                              <div className="flex flex-col items-end gap-0.5 shrink-0 text-xs">
+                                <span className="text-muted-foreground">{entry.contacted}/{entry.totalBusinesses} contacted</span>
+                                {entry.clientsWon > 0 && <span className="text-green-500 font-medium">{entry.clientsWon} won</span>}
+                                {entry.mrr > 0 && <span className="text-muted-foreground">{Math.round(entry.mrr).toLocaleString("pl-PL")} PLN</span>}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground/50 shrink-0">No data</span>
+                            )}
                             <button onClick={() => openEdit(city, metro)}
-                              className="p-1.5 rounded-md hover:bg-accent transition-colors shrink-0">
-                              {entry ? <Edit2 className="w-3.5 h-3.5 text-muted-foreground" /> : <Plus className="w-3.5 h-3.5 text-muted-foreground" />}
+                              className="ml-1 w-9 h-9 flex items-center justify-center rounded-lg hover:bg-accent transition-colors shrink-0 border border-border">
+                              {entry ? <Edit2 className="w-4 h-4 text-muted-foreground" /> : <Plus className="w-4 h-4 text-muted-foreground" />}
                             </button>
                           </div>
-                          <div>
-                            {entry?.totalBusinesses ? (
+                          {entry?.totalBusinesses ? (
+                            <div className="mt-3">
                               <ProgressBar value={entry.contacted} max={entry.totalBusinesses} />
-                            ) : (
-                              <div className="h-1.5 bg-muted rounded-full" />
-                            )}
-                          </div>
+                            </div>
+                          ) : null}
                         </div>
                       );
                     })}

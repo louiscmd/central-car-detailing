@@ -81,6 +81,7 @@ export default function RevenueEstimatorPage() {
   const [results, setResults] = useState<Results | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [activeTab, setActiveTab] = useState<"inputs" | "results">("inputs");
 
   useEffect(() => {
     fetch("/api/clients").then(r => r.json()).then((data: { data: Client[] }) => {
@@ -158,9 +159,23 @@ export default function RevenueEstimatorPage() {
         )}
       </div>
 
+      {/* Mobile tab bar */}
+      <div className="flex lg:hidden border border-border rounded-xl overflow-hidden">
+        <button
+          onClick={() => setActiveTab("inputs")}
+          className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === "inputs" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}>
+          Inputs
+        </button>
+        <button
+          onClick={() => setActiveTab("results")}
+          className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === "results" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}>
+          Results
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Inputs */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className={`lg:col-span-1 space-y-4 ${activeTab === "inputs" ? "" : "hidden lg:block"}`}>
           <div className="bg-card border border-border rounded-xl p-4 space-y-4">
             <h2 className="font-semibold text-sm">Business Profile</h2>
             <div>
@@ -194,7 +209,7 @@ export default function RevenueEstimatorPage() {
 
         {/* Results */}
         {results && (
-          <div className="lg:col-span-2 space-y-4">
+          <div className={`lg:col-span-2 space-y-4 ${activeTab === "results" ? "" : "hidden lg:block"}`}>
             {/* Confidence badge */}
             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium ${confidenceBg[results.confidence]}`}>
               <span className={confidenceColor[results.confidence]}>●</span>
