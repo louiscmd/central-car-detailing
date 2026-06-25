@@ -47,6 +47,8 @@ model User {
   territorySettings TerritorySettings?
   pipelineStages    PipelineStage[]
   leads             Lead[]
+  taskGroups        TaskGroup[]
+  tasks             Task[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -334,6 +336,36 @@ model FollowUp {
 
   @@index([leadId, dueDate])
   @@map("follow_ups")
+}
+
+model TaskGroup {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int      @default(0)
+  tasks     Task[]
+  createdAt DateTime @default(now())
+
+  @@index([userId, position])
+  @@map("task_groups")
+}
+
+model Task {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId   String?
+  group     TaskGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  title     String
+  completed Boolean    @default(false)
+  position  Int        @default(0)
+  dueDate   DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([userId, dueDate])
+  @@map("tasks")
 }
 
 model TerritorySettings {
