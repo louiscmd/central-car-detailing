@@ -15,6 +15,7 @@ import {
   TrendingUp,
   MapPin,
   Kanban,
+  CheckSquare,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -32,6 +33,7 @@ const navItems = [
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/reports", label: "Reports", icon: FileText },
   { href: "/deals", label: "Deal Tracker", icon: Kanban },
+  { href: "/tasks", label: "Daily Checklist", icon: CheckSquare },
   { href: "/revenue-estimator", label: "Revenue Estimator", icon: TrendingUp },
   { href: "/territory", label: "Territory Tracker", icon: MapPin },
   { href: "/settings", label: "Settings", icon: Settings },
