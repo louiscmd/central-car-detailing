@@ -19,10 +19,9 @@ export async function GET(req: Request) {
   return new Response("Forbidden", { status: 403 });
 }
 
-// ─── Incoming message events ─────────────────────────────────────────────────
+// ─── Incoming webhook events ─────────────────────────────────────────────────
 
 export async function POST(req: Request) {
-  // Verify signature
   const rawBody = await req.text();
   const sig = req.headers.get("x-hub-signature-256") ?? "";
   const expected = "sha256=" + createHmac("sha256", process.env.INSTAGRAM_APP_SECRET ?? "").update(rawBody).digest("hex");
@@ -41,9 +40,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  // Process each messaging event in background (don't block Facebook's 5s timeout)
   void processEvents(payload);
-
   return NextResponse.json({ ok: true });
 }
 
@@ -58,101 +55,131 @@ interface FacebookWebhookPayload {
       sender: { id: string };
       recipient: { id: string };
       timestamp: number;
-      message?: { mid: string; text?: string };
+      message?: { mid: string; text?: string; is_echo?: boolean };
+      read?: { watermark: number };
     }[];
   }[];
 }
 
-// ─── Processing logic ─────────────────────────────────────────────────────────
+// ─── Processing ───────────────────────────────────────────────────────────────
 
 async function processEvents(payload: FacebookWebhookPayload) {
   for (const entry of payload.entry) {
-    for (const event of entry.messaging ?? []) {
-      const text = event.message?.text;
-      if (!text) continue; // skip non-text events (attachments, etc.)
+    const pageId = entry.id;
 
+    for (const event of entry.messaging ?? []) {
       const senderPsid = event.sender.id;
 
-      // Ignore messages the page itself sent
-      if (senderPsid === entry.id) continue;
+      // ── Read receipt ──────────────────────────────────────────────────────
+      if (event.read) {
+        // The sender is the person who read our message (the lead).
+        // Skip if this is the page itself reading its own sent messages.
+        if (senderPsid === pageId) continue;
 
-      // Avoid duplicate processing — check if lead with this PSID already exists
-      const existing = await prisma.lead.findFirst({
-        where: { instagram: senderPsid, source: "FACEBOOK_MESSAGE" },
-      });
-      if (existing) {
-        // Add the message as an activity on the existing lead instead
-        await prisma.leadActivity.create({
-          data: {
-            leadId: existing.id,
-            type: "DM_SENT",
-            note: `New Facebook message: "${text.slice(0, 200)}"`,
+        // Look up lead by facebookPsid or (legacy) instagram field
+        const lead = await prisma.lead.findFirst({
+          where: {
+            OR: [
+              { facebookPsid: senderPsid },
+              { instagram: senderPsid },          // backward compat
+            ],
+            source: "FACEBOOK_MESSAGE",
           },
         });
+
+        if (lead) {
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: { messageRead: true, facebookPsid: senderPsid },
+          });
+        }
         continue;
       }
 
-      // Classify with Claude
-      const classification = await classifyMessage(text);
-      if (!classification.interested) continue;
+      // ── Inbound message (they replied) ────────────────────────────────────
+      if (event.message && !event.message.is_echo) {
+        const text = event.message.text;
+        if (!text) continue;
 
-      // Fetch sender's Facebook name
-      const senderName = await fetchSenderName(senderPsid);
+        // If the lead has read=true and now replied, clear the read flag
+        // and move them to "Replied" stage
+        const existing = await prisma.lead.findFirst({
+          where: {
+            OR: [
+              { facebookPsid: senderPsid },
+              { instagram: senderPsid },
+            ],
+            source: "FACEBOOK_MESSAGE",
+          },
+          include: { stage: true },
+        });
 
-      // Find the "Replied" stage for the first user (or any user — stages are per-user)
-      const stage = await prisma.pipelineStage.findFirst({
-        where: { name: "Replied" },
-        orderBy: { createdAt: "asc" },
-      });
-      if (!stage) continue;
+        if (existing) {
+          const repliedStage = await prisma.pipelineStage.findFirst({
+            where: { userId: existing.userId, name: "Replied" },
+          });
+          await prisma.lead.update({
+            where: { id: existing.id },
+            data: {
+              messageRead: false,           // they replied — remove from Seen column
+              facebookPsid: senderPsid,     // ensure PSID is stored
+              ...(repliedStage && existing.stage.name !== "Replied"
+                ? { stageId: repliedStage.id }
+                : {}),
+            },
+          });
+          await prisma.leadActivity.create({
+            data: {
+              leadId: existing.id,
+              type: "DM_SENT",
+              note: `Facebook reply: "${text.slice(0, 200)}"`,
+            },
+          });
+          continue;
+        }
 
-      // Get the userId from the stage (all stages belong to a user)
-      const userId = stage.userId;
+        // New lead from an inbound message — classify with Claude
+        const classification = await classifyMessage(text);
+        if (!classification.interested) continue;
 
-      // Create lead
-      const lead = await prisma.lead.create({
-        data: {
-          userId,
-          stageId: stage.id,
-          businessName: classification.businessName ?? senderName ?? "Facebook Lead",
-          category: classification.category ?? undefined,
-          city: classification.city ?? undefined,
-          contactName: senderName ?? undefined,
-          instagram: senderPsid, // store PSID here to detect duplicates
-          source: "FACEBOOK_MESSAGE",
-          notes: `Original message:\n"${text}"`,
-          score: 40,
-        },
-      });
+        const senderName = await fetchSenderName(senderPsid);
 
-      // Log activity
-      await prisma.leadActivity.create({
-        data: {
-          leadId: lead.id,
-          type: "CREATED",
-          note: `Auto-added from Facebook message: "${text.slice(0, 150)}"`,
-        },
-      });
+        const stage = await prisma.pipelineStage.findFirst({
+          where: { name: "Replied" },
+          orderBy: { createdAt: "asc" },
+        });
+        if (!stage) continue;
 
-      // Auto follow-up in 1 day
-      const followUpDate = new Date();
-      followUpDate.setDate(followUpDate.getDate() + 1);
-      await prisma.followUp.create({
-        data: {
-          leadId: lead.id,
-          dueDate: followUpDate,
-          priority: "HIGH",
-          note: "Reply to their Facebook message",
-        },
-      });
+        const lead = await prisma.lead.create({
+          data: {
+            userId: stage.userId,
+            stageId: stage.id,
+            businessName: classification.businessName ?? senderName ?? "Facebook Lead",
+            category: classification.category ?? undefined,
+            city: classification.city ?? undefined,
+            contactName: senderName ?? undefined,
+            facebookPsid: senderPsid,
+            instagram: senderPsid,          // legacy field for dedup compat
+            source: "FACEBOOK_MESSAGE",
+            notes: `Original message:\n"${text}"`,
+            score: 40,
+          },
+        });
 
-      await prisma.leadActivity.create({
-        data: {
-          leadId: lead.id,
-          type: "FOLLOW_UP_SCHEDULED",
-          note: "Auto-scheduled: Reply to their Facebook message",
-        },
-      });
+        await prisma.leadActivity.create({
+          data: {
+            leadId: lead.id,
+            type: "CREATED",
+            note: `Auto-added from Facebook message: "${text.slice(0, 150)}"`,
+          },
+        });
+
+        const followUpDate = new Date();
+        followUpDate.setDate(followUpDate.getDate() + 1);
+        await prisma.followUp.create({
+          data: { leadId: lead.id, dueDate: followUpDate, priority: "HIGH", note: "Reply to their Facebook message" },
+        });
+      }
     }
   }
 }
@@ -164,7 +191,6 @@ interface Classification {
   businessName?: string;
   category?: string;
   city?: string;
-  reason?: string;
 }
 
 async function classifyMessage(text: string): Promise<Classification> {
@@ -172,58 +198,30 @@ async function classifyMessage(text: string): Promise<Classification> {
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 256,
-      messages: [
-        {
-          role: "user",
-          content: `You are helping a Warsaw-based social media marketing agency classify incoming Facebook messages.
-
-Determine if this message is from someone potentially interested in buying social media marketing services (Instagram management, content creation, social media strategy, etc.).
-
+      messages: [{
+        role: "user",
+        content: `You are helping a Warsaw-based social media marketing agency classify incoming Facebook messages.
+Determine if this message is from someone interested in social media marketing services.
 Message: "${text}"
-
-Reply with ONLY a JSON object in this exact format:
-{
-  "interested": true or false,
-  "reason": "one sentence why",
-  "businessName": "if mentioned, otherwise null",
-  "category": "one of: restaurant, cafe, pizzeria, kebab, hotel, barbershop, hair_salon, gym, dental, real_estate, car_dealer, marketing, other — or null if unknown",
-  "city": "city name if mentioned, otherwise null"
-}
-
-Mark as interested=true if the message shows ANY of:
-- Asking about social media services, pricing, packages
-- Asking how to grow their Instagram/Facebook
-- Saying they have a business and want more followers/customers
-- Asking about collaboration or partnership for marketing
-- Expressing interest in online presence or branding
-
-Mark as interested=false if it's:
-- A personal message unrelated to business
-- Spam or promotional content from another agency
-- A complaint or customer service inquiry
-- Just a greeting with no business context`,
-        },
-      ],
+Reply ONLY with JSON: {"interested":true/false,"businessName":"or null","category":"restaurant/cafe/gym/other/null","city":"or null"}`,
+      }],
     });
-
     const raw = response.content[0].type === "text" ? response.content[0].text : "";
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return { interested: false };
-    return JSON.parse(jsonMatch[0]) as Classification;
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) return { interested: false };
+    return JSON.parse(m[0]) as Classification;
   } catch {
     return { interested: false };
   }
 }
 
-// ─── Fetch sender name from Graph API ────────────────────────────────────────
+// ─── Fetch sender name ────────────────────────────────────────────────────────
 
 async function fetchSenderName(psid: string): Promise<string | null> {
   try {
     const token = process.env.FACEBOOK_PAGE_ACCESS_TOKEN;
     if (!token) return null;
-    const res = await fetch(
-      `https://graph.facebook.com/v21.0/${psid}?fields=name&access_token=${token}`
-    );
+    const res = await fetch(`https://graph.facebook.com/v21.0/${psid}?fields=name&access_token=${token}`);
     if (!res.ok) return null;
     const data = await res.json() as { name?: string };
     return data.name ?? null;

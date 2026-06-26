@@ -301,6 +301,7 @@ model Lead {
   setupFee         Float         @default(0)
   closeProbability Float         @default(0.5)
   messageRead      Boolean       @default(false)
+  facebookPsid     String?
   activities       LeadActivity[]
   followUps        FollowUp[]
   createdAt        DateTime      @default(now())

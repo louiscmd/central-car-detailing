@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,17 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+
+interface SyncResult {
+  ok: boolean;
+  pageName?: string;
+  conversations?: number;
+  leads?: number;
+  matched?: number;
+  alreadyHad?: number;
+  unmatched?: number;
+  error?: string;
+}
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
@@ -20,6 +31,22 @@ export default function SettingsPage() {
     newPassword: "",
     confirmPassword: "",
   });
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+
+  async function syncPsids() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch("/api/facebook/sync-psids", { method: "POST" });
+      const data: SyncResult = await res.json();
+      setSyncResult(data);
+    } catch {
+      setSyncResult({ ok: false, error: "Network error. Try again." });
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -194,6 +221,63 @@ export default function SettingsPage() {
           <p className="text-xs text-muted-foreground">
             Run <code className="bg-muted px-1 rounded">npm run scheduler</code> in a separate process to activate the cron scheduler.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Facebook Page — Read Receipts */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Facebook Page — Read Receipts</CardTitle>
+          <CardDescription>
+            Sync your Facebook Page conversations to automatically detect when leads have read your DMs.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg bg-muted/30 border border-border p-4 space-y-2 text-sm">
+            <p className="font-medium">How it works</p>
+            <ol className="list-decimal list-inside space-y-1 text-muted-foreground text-xs">
+              <li>Click <strong>Sync Conversations</strong> — we fetch all your Facebook Page conversations and link each contact's ID to their lead in Deal Tracker.</li>
+              <li>From then on, whenever someone reads your message, Facebook sends our webhook a read receipt and we automatically move that lead into the <strong>Seen – No Reply</strong> column.</li>
+              <li>Re-run the sync any time you add new leads or want to refresh the matches.</li>
+            </ol>
+          </div>
+
+          <div className="rounded-lg bg-muted/30 border border-border p-4 space-y-1 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground text-sm mb-2">Required Vercel env vars</p>
+            <p><code className="bg-muted px-1 rounded">FACEBOOK_PAGE_ACCESS_TOKEN</code> — your Page access token (with <code>pages_messaging</code> permission)</p>
+            <p><code className="bg-muted px-1 rounded">FACEBOOK_VERIFY_TOKEN</code> — any secret string you set in the Facebook App webhook config</p>
+            <p className="mt-2">Webhook URL to register in Facebook App: <code className="bg-muted px-1 rounded">{typeof window !== "undefined" ? window.location.origin : "https://your-app.vercel.app"}/api/webhooks/facebook</code></p>
+            <p className="mt-1">Subscribe to the <strong>messages</strong> and <strong>message_reads</strong> events.</p>
+          </div>
+
+          <button
+            onClick={syncPsids}
+            disabled={syncing}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {syncing ? "Syncing conversations…" : "Sync Conversations"}
+          </button>
+
+          {syncResult && (
+            <div className={`flex items-start gap-3 rounded-lg p-3 border text-sm ${syncResult.ok ? "bg-green-500/5 border-green-500/20" : "bg-destructive/5 border-destructive/20"}`}>
+              {syncResult.ok
+                ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                : <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />}
+              <div className="space-y-0.5">
+                {syncResult.ok ? (
+                  <>
+                    <p className="font-medium text-green-400">Sync complete — {syncResult.pageName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {syncResult.conversations} conversations scanned · {syncResult.matched} new leads linked · {syncResult.alreadyHad} already had IDs · {syncResult.unmatched} unmatched
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-destructive">{syncResult.error}</p>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
