@@ -12,7 +12,7 @@ import {
   Plus, X, ChevronRight, Bell, AlertTriangle, CheckCircle2,
   Phone, Mail, Instagram, Globe, MapPin, Building2, Calendar,
   TrendingUp, Users, Target, Award, Clock, Edit2, Trash2, Check,
-  ChevronDown, Filter, Search, Upload,
+  ChevronDown, Filter, Search, Upload, Eye, EyeOff,
 } from "lucide-react";
 import {
   LEAD_SOURCES, ACTIVITY_LABELS, ACTIVITY_ICONS, PRIORITY_LABELS, PRIORITY_COLORS,
@@ -30,7 +30,7 @@ interface Lead {
   id: string; stageId: string; stage: Stage;
   businessName: string; category?: string; city?: string; contactName?: string;
   instagram?: string; phone?: string; email?: string; website?: string; notes?: string;
-  source: string; score: number;
+  source: string; score: number; messageRead: boolean;
   expectedRetainer: number; setupFee: number; closeProbability: number;
   activities: Activity[]; followUps: FollowUp[];
   _count: { activities: number; followUps: number };
@@ -71,7 +71,14 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
       className="bg-card border border-border rounded-lg p-3 cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all select-none space-y-2">
       <div className="flex items-start justify-between gap-1">
         <p className="text-sm font-semibold leading-tight line-clamp-1">{lead.businessName}</p>
-        <ScoreBadge score={lead.score} />
+        <div className="flex items-center gap-1 shrink-0">
+          {lead.messageRead && (
+            <span title="Message seen — no reply yet" className="flex items-center gap-0.5 text-[10px] font-medium text-sky-400 bg-sky-400/10 border border-sky-400/20 px-1.5 py-0.5 rounded-full">
+              <Eye className="w-2.5 h-2.5" /> Seen
+            </span>
+          )}
+          <ScoreBadge score={lead.score} />
+        </div>
       </div>
       {(lead.category || lead.city) && (
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -387,6 +394,29 @@ function LeadDrawer({ lead: initial, stages, onUpdate, onClose }: {
                 <p className="text-xs text-muted-foreground mb-1">Lead Source</p>
                 <p className="text-sm">{LEAD_SOURCES.find(s => s.value === lead.source)?.label ?? lead.source}</p>
               </div>
+              {/* Message read toggle */}
+              <button
+                onClick={async () => {
+                  const next = !lead.messageRead;
+                  setLead(l => ({ ...l, messageRead: next }));
+                  onUpdate({ ...lead, messageRead: next });
+                  await fetch(`/api/deals/${lead.id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ messageRead: next }),
+                  });
+                }}
+                className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${lead.messageRead ? "border-sky-400/30 bg-sky-400/5 text-sky-400" : "border-border bg-muted/30 text-muted-foreground hover:text-foreground"}`}
+              >
+                {lead.messageRead ? <Eye className="w-4 h-4 shrink-0" /> : <EyeOff className="w-4 h-4 shrink-0" />}
+                <div className="text-left">
+                  <p className="text-sm font-medium">{lead.messageRead ? "Message seen" : "Message not seen"}</p>
+                  <p className="text-xs opacity-70">{lead.messageRead ? "They read it but haven't replied" : "Mark if they opened your DM"}</p>
+                </div>
+                <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full border ${lead.messageRead ? "border-sky-400/30 bg-sky-400/10 text-sky-400" : "border-border"}`}>
+                  {lead.messageRead ? "ON" : "OFF"}
+                </span>
+              </button>
               {/* Log activity */}
               <div className="border border-border rounded-lg p-3 space-y-3">
                 <p className="text-xs font-medium">Log Activity</p>
