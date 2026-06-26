@@ -708,6 +708,16 @@ export default function DealsPage() {
 
   const activeDragLead = activeId ? leads.find(l => l.id === activeId) : null;
 
+  const clearSeen = async (leadId: string) => {
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, messageRead: false } : l));
+    if (selectedLead?.id === leadId) setSelectedLead(s => s ? { ...s, messageRead: false } : s);
+    await fetch(`/api/deals/${leadId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageRead: false }),
+    });
+  };
+
   if (loading) return (
     <div className="flex flex-col h-full -m-6 overflow-hidden">
       <div className="px-6 py-4 border-b border-border shrink-0">
@@ -845,7 +855,54 @@ export default function DealsPage() {
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
         <DndContext sensors={sensors} collisionDetection={closestCorners}
           onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-          <div className="flex gap-3 p-4 h-full" style={{ minWidth: `${stages.length * 280 + (stages.length - 1) * 12 + 32}px` }}>
+          <div className="flex gap-3 p-4 h-full" style={{ minWidth: `${(stages.length + 1) * 280 + stages.length * 12 + 32}px` }}>
+            {/* Virtual "Seen – No Reply" column */}
+            {(() => {
+              const seenLeads = filteredLeads.filter(l => l.messageRead);
+              return (
+                <div className="flex flex-col w-[268px] shrink-0 bg-sky-500/5 rounded-xl border border-sky-500/20">
+                  <div className="px-3 pt-3 pb-2 flex items-center gap-2">
+                    <Eye className="w-3 h-3 text-sky-400 shrink-0" />
+                    <span className="text-sm font-semibold flex-1 truncate text-sky-400">Seen – No Reply</span>
+                    <span className="text-xs text-sky-400/70 bg-sky-400/10 px-1.5 py-0.5 rounded-full">{seenLeads.length}</span>
+                  </div>
+                  <p className="px-3 pb-2 text-[10px] text-sky-400/50">Read your message, no response yet</p>
+                  <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2 min-h-[120px]">
+                    {seenLeads.map(lead => {
+                      const ev = calcExpectedValue(lead.expectedRetainer, lead.setupFee, lead.closeProbability);
+                      return (
+                        <div key={lead.id}
+                          onClick={() => setSelectedLead(lead)}
+                          className="bg-card border border-sky-500/20 rounded-lg p-3 cursor-pointer hover:border-sky-400/50 hover:shadow-sm transition-all space-y-2">
+                          <div className="flex items-start justify-between gap-1">
+                            <p className="text-sm font-semibold leading-tight line-clamp-1">{lead.businessName}</p>
+                            <ScoreBadge score={lead.score} />
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium"
+                              style={{ backgroundColor: `${lead.stage.color}20`, color: lead.stage.color }}>
+                              {lead.stage.name}
+                            </span>
+                            {lead.city && <span className="flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5" />{lead.city}</span>}
+                          </div>
+                          {ev > 0 && <p className="text-xs font-medium text-green-400">{fmt(ev)}</p>}
+                          <button
+                            onClick={e => { e.stopPropagation(); clearSeen(lead.id); }}
+                            className="w-full flex items-center justify-center gap-1.5 py-1 rounded-md bg-sky-500/10 text-sky-400 text-xs font-medium hover:bg-sky-500/20 transition-colors border border-sky-500/20">
+                            <Check className="w-3 h-3" /> Replied — remove
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {seenLeads.length === 0 && (
+                      <div className="h-16 border-2 border-dashed border-sky-500/10 rounded-lg flex items-center justify-center">
+                        <p className="text-xs text-sky-400/40">No leads seen yet</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
             {stages.map(stage => {
               const stageLeads = leadsByStage(stage.id);
               const stageValue = stageLeads.reduce((s, l) => s + calcExpectedValue(l.expectedRetainer, l.setupFee, l.closeProbability), 0);
