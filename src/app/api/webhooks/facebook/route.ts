@@ -3,6 +3,8 @@ import { createHmac } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
 
+export const maxDuration = 60;
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ─── Facebook webhook verification handshake ────────────────────────────────

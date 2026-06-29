@@ -5,6 +5,8 @@ import { scrapeAndSave } from "@/scrapers";
 
 export const maxDuration = 60;
 
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
