@@ -200,10 +200,25 @@ async function classifyMessage(text: string): Promise<Classification> {
       max_tokens: 256,
       messages: [{
         role: "user",
-        content: `You are helping a Warsaw-based social media marketing agency classify incoming Facebook messages.
-Determine if this message is from someone interested in social media marketing services.
+        content: `You are classifying inbound Facebook messages for a Warsaw-based social media freelancer who does cold DM outreach to restaurants and cafes, offering content creation (photos, videos, reels, posts).
+
+Classify this reply as interested=true ONLY if it contains a genuine engagement signal:
+- Asking for examples of work, portfolio, or previous clients ("prześlij przykłady", "pokaż portfolio", "show me your work", "send examples", "what have you done for others")
+- Asking about pricing, packages, or cost ("ile kosztuje", "how much", "cennik", "combien")
+- Wanting to meet, call, or continue the conversation ("spotykamy się", "zadzwoń", "let's talk", "rendez-vous")
+- Asking how the service works or what's included ("jak to działa", "co oferujesz", "tell me more", "what does it include")
+- Explicit statement of interest in working together ("jesteśmy zainteresowani", "I'm interested", "sounds interesting")
+- Asking for a proposal or offer ("prześlij ofertę", "send me a quote")
+
+Classify as interested=false if the message is:
+- An auto-reply or chatbot response ("odpowiedź automatyczna", "we'll get back to you", "we've received your message", "merci de nous avoir contacté")
+- A generic polite thank-you with no specific question ("dziękujemy za wiadomość", "merci pour votre message", "thank you for reaching out", "dzięki!")
+- A brief positive reaction without follow-through ("super!", "ok!", "miło słyszeć")
+- An invitation to visit their physical location (not relevant to the service offer)
+- A message that doesn't engage with the social media offer at all
+
 Message: "${text}"
-Reply ONLY with JSON: {"interested":true/false,"businessName":"or null","category":"restaurant/cafe/gym/other/null","city":"or null"}`,
+Reply ONLY with JSON: {"interested":true/false,"businessName":"name or null","category":"restaurant/cafe/gym/other/null","city":"city or null"}`,
       }],
     });
     const raw = response.content[0].type === "text" ? response.content[0].text : "";

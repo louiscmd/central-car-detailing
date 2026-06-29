@@ -15,33 +15,129 @@ function fixEncoding(str: string): string {
 }
 
 // ─── Classification patterns ─────────────────────────────────────────────────
-const AUTO_REPLY = [
+
+// Definitively automated — strip from "real" reply count entirely
+const AUTO_REPLY_EXPLICIT = [
+  /odpowied[zź] automatyczna/i,
+  /wiadomość automatyczna/i,
+  /odpowiadamy automatycznie/i,
+  /staramy si[eę] odpowiadać jak najszybciej/i,
   /nous vous répondrons dans les plus brefs/i,
   /nous avons reçu votre message et appréci/i,
-  /we'll get back to you/i,
-  /odpowied[zź] automnatyczna/i,
-  /staramy si[eę] odpowiadać jak najszybciej/i,
   /merci de nous avoir contact.*nous vous répondrons/i,
+  /réponse automatique/i,
+  /message automatique/i,
+  /auto.?reply/i,
+  /automated.?response/i,
+  /out of office/i,
+  /we.ll get back to you/i,
+  /we will get back to you/i,
+  /this is an automated/i,
 ];
+
+// Human-sounding but zero engagement — polite filler with no real follow-through
+const POLITE_GENERIC = [
+  /bardzo dziękujemy/i,
+  /dziękujemy za (zainteresowanie|kontakt|wiadomość|napisanie)/i,
+  /dzięki za (wiadomość|kontakt)/i,
+  /skontaktujemy się (z państwem|wkrótce|niedługo)/i,
+  /odezwiemy się (wkrótce|niedługo|do ciebie|do was)/i,
+  /wrócimy do (ciebie|was) (wkrótce|niebawem)/i,
+  /odpiszemy (wkrótce|niedługo|jak najszybciej)/i,
+  /zapraszamy (serdecznie )?(do nas|do restauracji|na wizyt|na miejsce|do odwiedzenia)/i,
+  /zapraszamy na (obiad|kolację|śniadanie|wizytę)/i,
+  /merci (beaucoup|pour votre message|de nous avoir)/i,
+  /nous vous contacterons/i,
+  /on revient vers vous/i,
+  /nous prendrons contact/i,
+  /thank you for (your message|contacting|reaching out|your interest)/i,
+  /we.ll be in touch/i,
+  /we appreciate your (interest|message|contact)/i,
+  /we.ve received your (message|inquiry)/i,
+];
+
 const NEGATIVE = [
   /nie jesteśmy zainteresowani/i,
   /nie skorzystamy/i,
   /nie jest.*zainteresow/i,
+  /nie (jestem|jesteśmy) zainteresow/i,
+  /nie (potrzebujemy|korzystamy) (z tego|z takich|takich)/i,
+  /dziękujemy,? ale nie/i,
+  /nie,? dziękujem/i,
   /pas intéressé/i,
   /ne sommes pas intéressé/i,
-  /not interested/i,
   /ne donneron[st] pas suite/i,
+  /ça ne nous intéresse pas/i,
+  /not interested/i,
+  /no thank(s| you)/i,
+  /not (looking|needed|required)/i,
 ];
+
+// Strong genuine-interest signals — portfolio/examples requests are the top priority
 const INTERESTED = [
+  // Portfolio / examples of work
+  /prześlij (przykłady|portfolio|realizacje|próbki)/i,
+  /pokaż (przykłady|portfolio|realizacje|poprzednie prace)/i,
+  /przykłady (twoich|waszych)? ?(prac|realizacji|zdjęć|postów|filmów|contentu)/i,
+  /jakie (masz|macie) (przykłady|realizacje|portfolio)/i,
+  /czy (możesz|mógłbyś|moglibyście) (pokazać|przesłać|wysłać) (przykłady|portfolio)/i,
+  /wyślij.*portfolio/i,
+  /wyślij.*przykład/i,
+  /pokaż.*co (robiłeś|robicie|zrobiłeś)/i,
+  /z czym (już )?(pracowałeś|pracowaliście)/i,
+  /jakie (restauracje|miejsca|klientów) (już )?(obsługujesz|prowadzisz|masz)/i,
+  /send (me )?(your )?(examples|portfolio|samples|previous work|work samples)/i,
+  /can you (send|show) (me )?(examples|portfolio|samples)/i,
+  /show me (your work|examples|portfolio|what you.ve done)/i,
+  /do you have (any )?(examples|a portfolio|samples)/i,
+  /envoy.*exemples/i,
+  /montrez.moi (vos|votre)/i,
+  /exemples de (vos|votre) travaux/i,
+  /avez.vous (des exemples|un portfolio)/i,
+  // Pricing
+  /ile (to )?(kosztuje|jest|wynosi|by kosztowało)/i,
+  /jaka (jest )?(cena|stawka|wycena|opłata|kwota)/i,
+  /cennik/i,
+  /proszę o wycen/i,
+  /ile za (miesiąc|obsługę|pakiet|współprac)/i,
+  /co (wchodzi|jest) w (pakiecie|ofercie|skład)/i,
+  /jakie (są|macie) pakiet/i,
+  /combien.*(coûte|ça coûte)/i,
+  /quel est le (prix|tarif|coût)/i,
+  /how much (does|is|would) (it|this)/i,
+  /pricing/i,
+  /what do you charge/i,
+  // Meeting / call
   /spotka[jćc]my/i,
   /możemy się spotkać/i,
-  /proszę o wycen/i,
-  /prześlij.*ofert/i,
   /porozmawiajmy/i,
+  /możemy (pogadać|porozmawiać)/i,
+  /zadzwoń (do mnie|proszę)/i,
   /mój numer/i,
+  /napisz na (maila|email)/i,
   /rendez-vous/i,
-  /please send/i,
-  /intéressé.*votre/i,
+  /appelez.moi/i,
+  /let.s (meet|talk|chat|connect|hop on a call)/i,
+  /call me/i,
+  /schedule a (call|meeting)/i,
+  // Proposals
+  /prześlij.*ofert/i,
+  /wyślij.*ofert/i,
+  /proszę (o|przesłać) ofert/i,
+  /send (me )?(a )?(proposal|offer|quote)/i,
+  // Explicit interest statements
+  /jestem (zainteresow|otwart)/i,
+  /jesteśmy (zainteresow|otwart)/i,
+  /interesuje (mnie|nas) (współpraca|temat|oferta)/i,
+  /chętnie (bym|się dowiedział|porozmawiał)/i,
+  /brzmi (interesująco|dobrze|ciekawie)/i,
+  /je suis intéressé/i,
+  /ça m.intéresse/i,
+  /intéressé par (votre|cette)/i,
+  /I.m interested/i,
+  /we.re interested/i,
+  /tell me more/i,
+  /more (information|info|details)/i,
 ];
 
 function extractPhone(text: string): string | null {
@@ -62,22 +158,36 @@ function classifyConvo(data: ConvoData): LeadInput | null {
   if (!louisMsgs.length) return null;
 
   const businessName = participants.find(p => !p.includes("Louis")) ?? "Unknown";
-  const bizText = bizMsgs.map(m => fixEncoding(m.content ?? "")).join(" ");
-  const realBizMsgs = bizMsgs.filter(m => !AUTO_REPLY.some(p => p.test(fixEncoding(m.content ?? ""))));
+
+  // Strip explicit auto-replies first
+  const realBizMsgs = bizMsgs.filter(
+    m => !AUTO_REPLY_EXPLICIT.some(p => p.test(fixEncoding(m.content ?? "")))
+  );
+
+  // Check if all remaining replies are just polite generic filler with no real engagement
+  const onlyPoliteGeneric =
+    realBizMsgs.length > 0 &&
+    realBizMsgs.every(m => POLITE_GENERIC.some(p => p.test(fixEncoding(m.content ?? ""))));
+
+  const realBizText = realBizMsgs.map(m => fixEncoding(m.content ?? "")).join(" ");
 
   let stage: string;
   if (!realBizMsgs.length) {
+    // No reply, or only explicit auto-replies
     stage = "Contacted";
-  } else if (NEGATIVE.some(p => p.test(bizText))) {
+  } else if (onlyPoliteGeneric) {
+    // Replied but only with pleasantries — treat same as no real reply
+    stage = "Contacted";
+  } else if (NEGATIVE.some(p => p.test(realBizText))) {
     stage = "Replied";
-  } else if (INTERESTED.some(p => p.test(bizText))) {
+  } else if (INTERESTED.some(p => p.test(realBizText))) {
     stage = "Interested";
   } else {
     stage = "Replied";
   }
 
   const lastBizMsg = realBizMsgs[0] ? fixEncoding(realBizMsgs[0].content ?? "").slice(0, 200) : "";
-  const allText = bizText + " " + fixEncoding(louisMsgs[louisMsgs.length - 1]?.content ?? "");
+  const allText = realBizText + " " + fixEncoding(louisMsgs[louisMsgs.length - 1]?.content ?? "");
 
   return {
     businessName,
