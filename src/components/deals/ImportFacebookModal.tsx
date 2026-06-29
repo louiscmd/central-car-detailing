@@ -305,6 +305,11 @@ export function ImportFacebookModal({ onClose, onDone }: { onClose: () => void; 
             <p className="text-xs text-muted-foreground">Businesses already in your Deal Tracker will be skipped automatically.</p>
             <div className="flex gap-2">
               <button onClick={onClose} className="flex-1 py-2 border border-border rounded-lg text-sm hover:bg-accent">Cancel</button>
+              <button
+                onClick={() => { setLeads([]); setStatus("idle"); if (inputRef.current) inputRef.current.value = ""; }}
+                className="flex-1 py-2 border border-destructive/50 text-destructive rounded-lg text-sm hover:bg-destructive/10">
+                Clear all
+              </button>
               <button onClick={handleImport} className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90">
                 Import {leads.length} leads
               </button>
