@@ -75,7 +75,7 @@ const NEGATIVE = [
 
 // Strong genuine-interest signals — portfolio/examples requests are the top priority
 const INTERESTED = [
-  // Portfolio / examples of work
+  // Portfolio / examples of work — Polish
   /prześlij (przykłady|portfolio|realizacje|próbki)/i,
   /pokaż (przykłady|portfolio|realizacje|poprzednie prace)/i,
   /przykłady (twoich|waszych)? ?(prac|realizacji|zdjęć|postów|filmów|contentu)/i,
@@ -86,14 +86,27 @@ const INTERESTED = [
   /pokaż.*co (robiłeś|robicie|zrobiłeś)/i,
   /z czym (już )?(pracowałeś|pracowaliście)/i,
   /jakie (restauracje|miejsca|klientów) (już )?(obsługujesz|prowadzisz|masz)/i,
+  // Portfolio / examples of work — English (broad coverage)
   /send (me )?(your )?(examples|portfolio|samples|previous work|work samples)/i,
-  /can you (send|show) (me )?(examples|portfolio|samples)/i,
-  /show me (your work|examples|portfolio|what you.ve done)/i,
-  /do you have (any )?(examples|a portfolio|samples)/i,
+  /can (you|i) (send|show) (me )?(some )?(examples|portfolio|samples|your work)/i,
+  /could you (send|show|share) (me )?(some )?(examples|portfolio|samples|your work)/i,
+  /show me (your work|examples|portfolio|what you.ve done|what you do|your content)/i,
+  /can i see (your work|some examples|your portfolio|what you.ve done|your content)/i,
+  /i.d (love|like) to see (some|your)? ?(examples|work|content|portfolio|samples)/i,
+  /do you have (any )?(examples|a portfolio|samples|previous work|case studies)/i,
+  /share (some|your|a few)? ?(examples|work|content|samples|portfolio)/i,
+  /what (does your|kind of) (work|content) (look like|do you (create|make|produce|do))/i,
+  /what have you (created|done|made|produced) (before|for others|for (restaurants|clients))/i,
+  /interested[,!.]? ?(can you|could you|please)? ?(send|show|share)/i,
+  /sounds (good|great|interesting)[,!.]? ?(can you|could you|please)/i,
+  /what.s your (portfolio|work look like|previous work|experience like)/i,
+  // Portfolio / examples of work — French
   /envoy.*exemples/i,
   /montrez.moi (vos|votre)/i,
   /exemples de (vos|votre) travaux/i,
   /avez.vous (des exemples|un portfolio)/i,
+  /pouvez.vous (montrer|envoyer|partager)/i,
+  /vous avez (des exemples|un portfolio|des réalisations)/i,
   // Pricing
   /ile (to )?(kosztuje|jest|wynosi|by kosztowało)/i,
   /jaka (jest )?(cena|stawka|wycena|opłata|kwota)/i,
@@ -173,15 +186,15 @@ function classifyConvo(data: ConvoData): LeadInput | null {
 
   let stage: string;
   if (!realBizMsgs.length) {
-    // No reply, or only explicit auto-replies
     stage = "Contacted";
-  } else if (onlyPoliteGeneric) {
-    // Replied but only with pleasantries — treat same as no real reply
-    stage = "Contacted";
-  } else if (NEGATIVE.some(p => p.test(realBizText))) {
-    stage = "Replied";
   } else if (INTERESTED.some(p => p.test(realBizText))) {
+    // Check INTERESTED first — a message can be polite AND ask for examples
     stage = "Interested";
+  } else if (NEGATIVE.some(p => p.test(realBizText))) {
+    stage = "Not Interested";
+  } else if (onlyPoliteGeneric) {
+    // Only pleasantries with no real engagement — treat as no reply
+    stage = "Contacted";
   } else {
     stage = "Replied";
   }

@@ -19,14 +19,24 @@ export async function POST(req: Request) {
   }
 
   const [stages, existing] = await Promise.all([
-    prisma.pipelineStage.findMany({ where: { userId: session.user.id }, select: { id: true, name: true } }),
+    prisma.pipelineStage.findMany({ where: { userId: session.user.id }, select: { id: true, name: true, position: true } }),
     prisma.lead.findMany({
       where: { userId: session.user.id, source: "FACEBOOK_MESSAGE" },
       select: { businessName: true },
     }),
   ]);
 
-  const stageMap = Object.fromEntries(stages.map(s => [s.name, s.id]));
+  let stageMap = Object.fromEntries(stages.map(s => [s.name, s.id]));
+
+  // Create "Not Interested" stage on first import if it doesn't exist
+  if (!stageMap["Not Interested"]) {
+    const maxPos = stages.reduce((m, s) => Math.max(m, s.position), 0);
+    const created = await prisma.pipelineStage.create({
+      data: { userId: session.user!.id!, name: "Not Interested", color: "#ef4444", position: maxPos + 1 },
+    });
+    stageMap = { ...stageMap, "Not Interested": created.id };
+  }
+
   const defaultStageId = stageMap["Contacted"] ?? stages[0]?.id;
   const existingNames = new Set(existing.map(l => l.businessName.toLowerCase().trim()));
 
@@ -41,7 +51,7 @@ export async function POST(req: Request) {
         source: "FACEBOOK_MESSAGE",
         notes: l.notes ?? null,
         phone: l.phone ?? null,
-        score: l.stage === "Interested" ? 80 : l.stage === "Replied" ? 40 : 10,
+        score: l.stage === "Interested" ? 80 : l.stage === "Replied" ? 40 : l.stage === "Not Interested" ? 5 : 10,
       })),
     });
   }
