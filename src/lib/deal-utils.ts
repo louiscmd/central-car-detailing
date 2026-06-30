@@ -1,15 +1,11 @@
 export const DEFAULT_STAGES = [
-  { name: "Not Contacted", position: 0, color: "#94a3b8" },
-  { name: "Contacted", position: 1, color: "#60a5fa" },
-  { name: "Replied", position: 2, color: "#34d399" },
-  { name: "Interested", position: 3, color: "#a78bfa" },
-  { name: "Meeting Scheduled", position: 4, color: "#f472b6" },
-  { name: "Proposal Sent", position: 5, color: "#fb923c" },
-  { name: "Negotiating", position: 6, color: "#fbbf24" },
-  { name: "Verbal Yes", position: 7, color: "#4ade80" },
-  { name: "Contract Sent", position: 8, color: "#22d3ee" },
-  { name: "Client Won", position: 9, color: "#16a34a" },
-  { name: "Client Lost", position: 10, color: "#ef4444" },
+  { name: "Contacted",                color: "#6366f1", position: 0 },
+  { name: "Positive reply",           color: "#22c55e", position: 1 },
+  { name: "Negative reply",           color: "#ef4444", position: 2 },
+  { name: "Meeting / call scheduled", color: "#8b5cf6", position: 3 },
+  { name: "Verbal yes",               color: "#f59e0b", position: 4 },
+  { name: "Client won",               color: "#10b981", position: 5 },
+  { name: "Client lost",              color: "#6b7280", position: 6 },
 ];
 
 export const LEAD_SOURCES = [

@@ -13,13 +13,16 @@ export async function GET() {
     include: { _count: { select: { leads: true } } },
   });
 
-  if (stages.length === 0) {
+  // Always ensure all default stages exist — adds any missing ones
+  const existingNames = new Set(stages.map(s => s.name));
+  const missing = DEFAULT_STAGES.filter(s => !existingNames.has(s.name));
+  if (missing.length > 0) {
     const userId = session.user.id;
     await prisma.pipelineStage.createMany({
-      data: DEFAULT_STAGES.map(s => ({ userId, ...s })),
+      data: missing.map(s => ({ userId, ...s })),
     });
     stages = await prisma.pipelineStage.findMany({
-      where: { userId },
+      where: { userId: session.user.id },
       orderBy: { position: "asc" },
       include: { _count: { select: { leads: true } } },
     });
