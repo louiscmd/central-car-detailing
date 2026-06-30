@@ -35,7 +35,7 @@ const AUTO_REPLY_EXPLICIT = [
   /this is an automated/i,
 ];
 
-// Human-sounding but zero engagement — polite filler with no real follow-through
+// Human-sounding but zero-engagement filler
 const POLITE_GENERIC = [
   /bardzo dziękujemy/i,
   /dziękujemy za (zainteresowanie|kontakt|wiadomość|napisanie)/i,
@@ -56,26 +56,83 @@ const POLITE_GENERIC = [
   /we.ve received your (message|inquiry)/i,
 ];
 
+// Clear verbal agreement — they said yes before any contract/payment
+const VERBAL_YES = [
+  // Polish
+  /zróbmy to/i,
+  /tak,? (chcemy|chciałbym|chciałabym|chcę)/i,
+  /(chcemy|chciałbym|jesteśmy gotowi) (z tobą |z wami )?(pracować|współpracować|zacząć|rozpocząć)/i,
+  /wyślij (mi |nam )?(umowę|kontrakt|fakturę|ofertę do podpisania)/i,
+  /zgadzamy się/i,
+  /jesteśmy (na tak|gotowi do)/i,
+  /zaczynamy/i,
+  // English
+  /let.s (do it|get started|begin|go ahead|move forward)/i,
+  /we.d (love|like) to (proceed|work (with you|together)|start|get started)/i,
+  /i.m (in\b|ready to (start|proceed|begin))/i,
+  /send (me |us )?(the )?(contract|invoice|agreement|proposal to sign)/i,
+  /we.re (on board|ready to (start|go|proceed))/i,
+  /yes[,!]?\s*(let.s|we.d|i.m|please|send)/i,
+  // French
+  /on y va/i,
+  /c.est (bon|d.accord|parfait)[,.!]?\s*(pour nous|envoyez|on commence)/i,
+  /envoyez.?(moi|nous) (le contrat|la facture|votre offre)/i,
+  /on (est )?(prêt|partant|d.accord)/i,
+  /on commence (quand|lundi|maintenant)/i,
+];
+
+// Confirmed specific meeting/call (time agreed, not just discussing possibility)
+const MEETING_SCHEDULED = [
+  // Polish — specific time or booking confirmation
+  /umówmy się (na|w|o)/i,
+  /umawiam(y)? się/i,
+  /(poniedziałek|wtorek|środę|czwartek|piątek|sobotę|niedzielę).{0,25}(godzin|ok\.|o \d|\d{1,2}:\d{2})/i,
+  /\d{1,2}:\d{2}.{0,15}(mogę|pasuje|ok)/i,
+  /oto (mój )?(calendly|link do spotkania)/i,
+  // English — specific time/booking
+  /book me in/i,
+  /here.s my (calendly|cal\.com|scheduling link)/i,
+  /(monday|tuesday|wednesday|thursday|friday|saturday|sunday).{0,20}(works?|at \d|ok\.?$)/i,
+  /\d{1,2}(:\d{2})?\s?(am|pm).{0,20}(works?|good|fine|ok)/i,
+  /let.s (jump|hop) on a call/i,
+  /i.ve (booked|scheduled|set up) (a |the )?(call|meeting)/i,
+  // French — specific time/booking
+  /(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche).{0,20}(ça marche|c.est bon|ok)/i,
+  /je suis disponible (lundi|mardi|mercredi|jeudi|vendredi|ce)/i,
+  /rendez-vous (lundi|mardi|mercredi|jeudi|vendredi|ce|le \d)/i,
+  /voici mon (calendly|lien|numéro)/i,
+];
+
+// Explicit disinterest
 const NEGATIVE = [
+  // Polish
   /nie jesteśmy zainteresowani/i,
   /nie skorzystamy/i,
-  /nie jest.*zainteresow/i,
   /nie (jestem|jesteśmy) zainteresow/i,
   /nie (potrzebujemy|korzystamy) (z tego|z takich|takich)/i,
   /dziękujemy,? ale nie/i,
   /nie,? dziękujem/i,
+  /już (współpracujemy|mamy kogoś|korzystamy z)/i,
+  /mamy już (kogoś|agencję|osobę)/i,
+  // French
   /pas intéressé/i,
   /ne sommes pas intéressé/i,
   /ne donneron[st] pas suite/i,
   /ça ne nous intéresse pas/i,
+  /on travaille déjà avec/i,
+  /on a déjà quelqu.un/i,
+  // English
   /not interested/i,
   /no thank(s| you)/i,
   /not (looking|needed|required)/i,
+  /we already (have|work with) (someone|an agency)/i,
+  /we.re (good|all set|not looking)/i,
+  /please (stop|remove|unsubscribe)/i,
 ];
 
-// Strong genuine-interest signals — portfolio/examples requests are the top priority
+// Genuine buying interest signals (pricing, portfolio, more info, etc.)
 const INTERESTED = [
-  // Portfolio / examples of work — Polish
+  // Portfolio / examples — Polish
   /prześlij (przykłady|portfolio|realizacje|próbki)/i,
   /pokaż (przykłady|portfolio|realizacje|poprzednie prace)/i,
   /przykłady (twoich|waszych)? ?(prac|realizacji|zdjęć|postów|filmów|contentu)/i,
@@ -86,7 +143,7 @@ const INTERESTED = [
   /pokaż.*co (robiłeś|robicie|zrobiłeś)/i,
   /z czym (już )?(pracowałeś|pracowaliście)/i,
   /jakie (restauracje|miejsca|klientów) (już )?(obsługujesz|prowadzisz|masz)/i,
-  // Portfolio / examples of work — English (broad coverage)
+  // Portfolio / examples — English
   /send (me )?(your )?(examples|portfolio|samples|previous work|work samples)/i,
   /can (you|i) (send|show) (me )?(some )?(examples|portfolio|samples|your work)/i,
   /could you (send|show|share) (me )?(some )?(examples|portfolio|samples|your work)/i,
@@ -97,17 +154,15 @@ const INTERESTED = [
   /share (some|your|a few)? ?(examples|work|content|samples|portfolio)/i,
   /what (does your|kind of) (work|content) (look like|do you (create|make|produce|do))/i,
   /what have you (created|done|made|produced) (before|for others|for (restaurants|clients))/i,
-  /interested[,!.]? ?(can you|could you|please)? ?(send|show|share)/i,
-  /sounds (good|great|interesting)[,!.]? ?(can you|could you|please)/i,
   /what.s your (portfolio|work look like|previous work|experience like)/i,
-  // Portfolio / examples of work — French
+  // Portfolio / examples — French
   /envoy.*exemples/i,
   /montrez.moi (vos|votre)/i,
   /exemples de (vos|votre) travaux/i,
   /avez.vous (des exemples|un portfolio)/i,
   /pouvez.vous (montrer|envoyer|partager)/i,
   /vous avez (des exemples|un portfolio|des réalisations)/i,
-  // Pricing
+  // Pricing — Polish/French/English
   /ile (to )?(kosztuje|jest|wynosi|by kosztowało)/i,
   /jaka (jest )?(cena|stawka|wycena|opłata|kwota)/i,
   /cennik/i,
@@ -120,25 +175,22 @@ const INTERESTED = [
   /how much (does|is|would) (it|this)/i,
   /pricing/i,
   /what do you charge/i,
-  // Meeting / call
-  /spotka[jćc]my/i,
-  /możemy się spotkać/i,
+  // Discussing possibility of meeting/call (not yet confirmed)
+  /możemy (pogadać|porozmawiać|się spotkać)/i,
   /porozmawiajmy/i,
-  /możemy (pogadać|porozmawiać)/i,
   /zadzwoń (do mnie|proszę)/i,
   /mój numer/i,
   /napisz na (maila|email)/i,
-  /rendez-vous/i,
   /appelez.moi/i,
-  /let.s (meet|talk|chat|connect|hop on a call)/i,
+  /let.s (meet|talk|chat|connect)/i,
   /call me/i,
-  /schedule a (call|meeting)/i,
-  // Proposals
+  /can we (talk|chat|meet|speak)/i,
+  // Proposals / offers
   /prześlij.*ofert/i,
   /wyślij.*ofert/i,
   /proszę (o|przesłać) ofert/i,
   /send (me )?(a )?(proposal|offer|quote)/i,
-  // Explicit interest statements
+  // Explicit interest
   /jestem (zainteresow|otwart)/i,
   /jesteśmy (zainteresow|otwart)/i,
   /interesuje (mnie|nas) (współpraca|temat|oferta)/i,
@@ -147,10 +199,10 @@ const INTERESTED = [
   /je suis intéressé/i,
   /ça m.intéresse/i,
   /intéressé par (votre|cette)/i,
-  /I.m interested/i,
-  /we.re interested/i,
   /tell me more/i,
   /more (information|info|details)/i,
+  /sounds (good|great|interesting)[,!.]? ?(can you|could you|please)/i,
+  /interested[,!.]? ?(can you|could you|please)? ?(send|show|share)/i,
 ];
 
 function extractPhone(text: string): string | null {
@@ -187,16 +239,18 @@ function classifyConvo(data: ConvoData): LeadInput | null {
   let stage: string;
   if (!realBizMsgs.length) {
     stage = "Contacted";
+  } else if (VERBAL_YES.some(p => p.test(realBizText))) {
+    stage = "Verbal yes";
+  } else if (MEETING_SCHEDULED.some(p => p.test(realBizText))) {
+    stage = "Meeting / call scheduled";
   } else if (INTERESTED.some(p => p.test(realBizText))) {
-    // Check INTERESTED first — a message can be polite AND ask for examples
-    stage = "Interested";
+    // Check before polite-generic — a message can be polite AND ask for examples
+    stage = "Positive reply";
   } else if (NEGATIVE.some(p => p.test(realBizText))) {
-    stage = "Not Interested";
-  } else if (onlyPoliteGeneric) {
-    // Only pleasantries with no real engagement — treat as no reply
-    stage = "Contacted";
+    stage = "Negative reply";
   } else {
-    stage = "Replied";
+    // Generic replies, polite filler, or unclear — no buying signal
+    stage = "Contacted";
   }
 
   const lastBizMsg = realBizMsgs[0] ? fixEncoding(realBizMsgs[0].content ?? "").slice(0, 200) : "";

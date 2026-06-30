@@ -117,16 +117,17 @@ async function processEvents(payload: FacebookWebhookPayload) {
         });
 
         if (existing) {
-          const repliedStage = await prisma.pipelineStage.findFirst({
-            where: { userId: existing.userId, name: "Replied" },
+          const positiveStage = await prisma.pipelineStage.findFirst({
+            where: { userId: existing.userId, name: "Positive reply" },
           });
+          const LOW_STAGES = ["Contacted", "Positive reply"];
           await prisma.lead.update({
             where: { id: existing.id },
             data: {
-              messageRead: false,           // they replied — remove from Seen column
-              facebookPsid: senderPsid,     // ensure PSID is stored
-              ...(repliedStage && existing.stage.name !== "Replied"
-                ? { stageId: repliedStage.id }
+              messageRead: false,
+              facebookPsid: senderPsid,
+              ...(positiveStage && LOW_STAGES.includes(existing.stage.name)
+                ? { stageId: positiveStage.id }
                 : {}),
             },
           });
@@ -142,12 +143,23 @@ async function processEvents(payload: FacebookWebhookPayload) {
 
         // New lead from an inbound message — classify with Claude
         const classification = await classifyMessage(text);
-        if (!classification.interested) continue;
+        if (classification.stage === "CONTACTED" || classification.stage === "NOT_INTERESTED") continue;
+
+        const STAGE_NAME: Record<string, string> = {
+          CLIENT_WON: "Client won",
+          VERBAL_YES: "Verbal yes",
+          MEETING_SCHEDULED: "Meeting / call scheduled",
+          INTERESTED: "Positive reply",
+        };
+        const STAGE_SCORE: Record<string, number> = {
+          CLIENT_WON: 100, VERBAL_YES: 75, MEETING_SCHEDULED: 60, INTERESTED: 40,
+        };
 
         const senderName = await fetchSenderName(senderPsid);
+        const targetStageName = STAGE_NAME[classification.stage] ?? "Positive reply";
 
         const stage = await prisma.pipelineStage.findFirst({
-          where: { name: "Replied" },
+          where: { name: targetStageName },
           orderBy: { createdAt: "asc" },
         });
         if (!stage) continue;
@@ -161,10 +173,10 @@ async function processEvents(payload: FacebookWebhookPayload) {
             city: classification.city ?? undefined,
             contactName: senderName ?? undefined,
             facebookPsid: senderPsid,
-            instagram: senderPsid,          // legacy field for dedup compat
+            instagram: senderPsid,
             source: "FACEBOOK_MESSAGE",
-            notes: `Original message:\n"${text}"`,
-            score: 40,
+            notes: `Original message:\n"${text}"\n\nClassifier: ${classification.stage} (${Math.round(classification.confidence * 100)}%) — ${classification.reason}`,
+            score: STAGE_SCORE[classification.stage] ?? 40,
           },
         });
 
@@ -188,47 +200,61 @@ async function processEvents(payload: FacebookWebhookPayload) {
 
 // ─── Claude classification ────────────────────────────────────────────────────
 
+type ClassifierStage = "CLIENT_WON" | "VERBAL_YES" | "MEETING_SCHEDULED" | "INTERESTED" | "NOT_INTERESTED" | "CONTACTED";
+
 interface Classification {
-  interested: boolean;
-  businessName?: string;
-  category?: string;
-  city?: string;
+  stage: ClassifierStage;
+  confidence: number;
+  reason: string;
+  businessName?: string | null;
+  category?: string | null;
+  city?: string | null;
 }
 
 async function classifyMessage(text: string): Promise<Classification> {
+  const fallback: Classification = { stage: "CONTACTED", confidence: 1, reason: "classifier error" };
   try {
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 256,
+      max_tokens: 300,
       messages: [{
         role: "user",
-        content: `You are classifying inbound Facebook messages for a Warsaw-based social media freelancer who does cold DM outreach to restaurants and cafes, offering content creation (photos, videos, reels, posts).
+        content: `You are a sales pipeline classifier for a social media content creator who cold-DMs restaurants and cafés in Warsaw, London, and France offering photography, video, and social media management.
 
-Classify this reply as interested=true ONLY if it contains a genuine engagement signal:
-- Asking for examples of work, portfolio, or previous clients ("prześlij przykłady", "pokaż portfolio", "show me your work", "send examples", "what have you done for others")
-- Asking about pricing, packages, or cost ("ile kosztuje", "how much", "cennik", "combien")
-- Wanting to meet, call, or continue the conversation ("spotykamy się", "zadzwoń", "let's talk", "rendez-vous")
-- Asking how the service works or what's included ("jak to działa", "co oferujesz", "tell me more", "what does it include")
-- Explicit statement of interest in working together ("jesteśmy zainteresowani", "I'm interested", "sounds interesting")
-- Asking for a proposal or offer ("prześlij ofertę", "send me a quote")
+Determine the HIGHEST pipeline stage reached. Return the highest — never multiple.
 
-Classify as interested=false if the message is:
-- An auto-reply or chatbot response ("odpowiedź automatyczna", "we'll get back to you", "we've received your message", "merci de nous avoir contacté")
-- A generic polite thank-you with no specific question ("dziękujemy za wiadomość", "merci pour votre message", "thank you for reaching out", "dzięki!")
-- A brief positive reaction without follow-through ("super!", "ok!", "miło słyszeć")
-- An invitation to visit their physical location (not relevant to the service offer)
-- A message that doesn't engage with the social media offer at all
+STAGES (highest to lowest):
+
+CLIENT_WON — Payment sent, contract signed, project started, "see you Monday", "let's start".
+
+VERBAL_YES — Clear agreement to work together before payment: "yes let's do it", "we'd like to proceed", "send the contract", "let's begin", "I'm in", "on y va", "zróbmy to".
+
+MEETING_SCHEDULED — Specific call or meeting confirmed (day/time agreed, Calendly sent, "book me in"). Do NOT use if they're only discussing the possibility of a call.
+
+INTERESTED — Any genuine buying signal: asking for pricing, portfolio, examples of work, references, how the service works, packages, next steps, wanting to discuss further. Asking questions about the offer = INTERESTED. Examples: "can you send examples?", "what's your pricing?", "tell me more", "could you send your portfolio?", "prześlij przykłady", "ile kosztuje", "envoyez des exemples".
+
+NOT_INTERESTED — Clear decline: "not interested", "we already have someone", "no thanks", "please stop", "nie jesteśmy zainteresowani", "pas intéressé", "mamy już kogoś".
+
+CONTACTED — No meaningful buying signal: seen, no reply, auto-replies, generic thank-yous, greetings, emoji reactions, "we'll get back to you", "message received", Facebook/Instagram automatic responses, invitations to visit the restaurant.
+
+RULES:
+- Read the full message before deciding.
+- Negations override keywords: "we are NOT interested" = NOT_INTERESTED.
+- Automated or generic thank-you messages = CONTACTED, never INTERESTED.
+- If uncertain between CONTACTED and INTERESTED, choose CONTACTED.
 
 Message: "${text}"
-Reply ONLY with JSON: {"interested":true/false,"businessName":"name or null","category":"restaurant/cafe/gym/other/null","city":"city or null"}`,
+
+Reply ONLY with this JSON (no markdown):
+{"stage":"CONTACTED","confidence":0.95,"reason":"one sentence","businessName":"name or null","category":"restaurant/cafe/bar/gym/other or null","city":"city or null"}`,
       }],
     });
     const raw = response.content[0].type === "text" ? response.content[0].text : "";
     const m = raw.match(/\{[\s\S]*\}/);
-    if (!m) return { interested: false };
+    if (!m) return fallback;
     return JSON.parse(m[0]) as Classification;
   } catch {
-    return { interested: false };
+    return fallback;
   }
 }
 

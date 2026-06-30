@@ -28,14 +28,29 @@ export async function POST(req: Request) {
 
   let stageMap = Object.fromEntries(stages.map(s => [s.name, s.id]));
 
-  // Create "Not Interested" stage on first import if it doesn't exist
-  if (!stageMap["Not Interested"]) {
-    const maxPos = stages.reduce((m, s) => Math.max(m, s.position), 0);
-    const created = await prisma.pipelineStage.create({
-      data: { userId: session.user!.id!, name: "Not Interested", color: "#ef4444", position: maxPos + 1 },
-    });
-    stageMap = { ...stageMap, "Not Interested": created.id };
+  // Ensure all pipeline stages exist; create any that are missing
+  const REQUIRED_STAGES = [
+    { name: "Contacted",                color: "#6366f1", position: 0 },
+    { name: "Positive reply",           color: "#22c55e", position: 1 },
+    { name: "Negative reply",           color: "#ef4444", position: 2 },
+    { name: "Meeting / call scheduled", color: "#8b5cf6", position: 3 },
+    { name: "Verbal yes",               color: "#f59e0b", position: 4 },
+    { name: "Client won",               color: "#10b981", position: 5 },
+    { name: "Client lost",              color: "#6b7280", position: 6 },
+  ];
+  for (const s of REQUIRED_STAGES) {
+    if (!stageMap[s.name]) {
+      const created = await prisma.pipelineStage.create({
+        data: { userId: session.user!.id!, name: s.name, color: s.color, position: s.position },
+      });
+      stageMap = { ...stageMap, [s.name]: created.id };
+    }
   }
+
+  const SCORE: Record<string, number> = {
+    "Contacted": 10, "Positive reply": 40, "Negative reply": 5,
+    "Meeting / call scheduled": 60, "Verbal yes": 75, "Client won": 100, "Client lost": 0,
+  };
 
   const defaultStageId = stageMap["Contacted"] ?? stages[0]?.id;
   const existingNames = new Set(existing.map(l => l.businessName.toLowerCase().trim()));
@@ -51,7 +66,7 @@ export async function POST(req: Request) {
         source: "FACEBOOK_MESSAGE",
         notes: l.notes ?? null,
         phone: l.phone ?? null,
-        score: l.stage === "Interested" ? 80 : l.stage === "Replied" ? 40 : l.stage === "Not Interested" ? 5 : 10,
+        score: SCORE[l.stage] ?? 10,
       })),
     });
   }
