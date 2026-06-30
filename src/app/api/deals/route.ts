@@ -68,3 +68,11 @@ export async function POST(req: Request) {
 
   return NextResponse.json(full);
 }
+
+export async function DELETE(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { count } = await prisma.lead.deleteMany({ where: { userId: session.user.id } });
+  return NextResponse.json({ deleted: count });
+}

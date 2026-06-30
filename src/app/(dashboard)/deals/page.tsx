@@ -760,6 +760,12 @@ export default function DealsPage() {
             className="p-1.5 rounded-md border border-border hover:bg-accent transition-colors">
             <Upload className="w-4 h-4" />
           </button>
+          <button
+            onClick={() => { if (window.confirm("Delete all leads? This cannot be undone.")) { fetch("/api/deals", { method: "DELETE" }).then(() => setLeads([])); } }}
+            title="Clear all leads"
+            className="p-1.5 rounded-md border border-destructive/40 text-destructive hover:bg-destructive/10 transition-colors">
+            <Trash2 className="w-4 h-4" />
+          </button>
           <button onClick={() => setShowAdd(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90">
             <Plus className="w-4 h-4" /><span className="hidden sm:inline">Add Lead</span>
