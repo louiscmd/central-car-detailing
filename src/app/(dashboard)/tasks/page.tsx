@@ -3,8 +3,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Check, Plus, Trash2, Edit2, X, ChevronDown, ChevronRight,
-  ChevronLeft, Clock, CheckSquare, Calendar,
+  ChevronLeft, Clock, CheckSquare, Calendar, GripVertical,
 } from "lucide-react";
+import {
+  DndContext, PointerSensor, useSensor, useSensors, closestCenter,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -332,13 +340,16 @@ function DayCalendar({ date, tasks, onNavigate }: {
 
 // ─── Task item ────────────────────────────────────────────────────────────────
 
-function TaskItem({ task, calendarDate, onToggle, onDelete, onRename, onSchedule }: {
+function TaskItem({ task, calendarDate, onToggle, onDelete, onRename, onSchedule, dragRef, dragStyle, dragHandle }: {
   task: Task;
   calendarDate: Date;
   onToggle: () => void;
   onDelete: () => void;
   onRename: (t: string) => void;
   onSchedule: (start: string | null, end: string | null) => void;
+  dragRef?: (node: HTMLElement | null) => void;
+  dragStyle?: React.CSSProperties;
+  dragHandle?: React.ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
@@ -367,7 +378,8 @@ function TaskItem({ task, calendarDate, onToggle, onDelete, onRename, onSchedule
 
   return (
     <>
-      <div className={`group flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-accent/40 transition-colors ${task.completed ? "opacity-55" : ""}`}>
+      <div ref={dragRef} style={dragStyle} className={`group flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-accent/40 transition-colors ${task.completed ? "opacity-55" : ""}`}>
+        {dragHandle}
         <button onClick={onToggle}
           className={`shrink-0 rounded border transition-colors flex items-center justify-center
             ${task.completed ? "bg-primary border-primary" : "border-border hover:border-primary"}`}
@@ -433,6 +445,28 @@ function TaskItem({ task, calendarDate, onToggle, onDelete, onRename, onSchedule
   );
 }
 
+// ─── Sortable task item ───────────────────────────────────────────────────────
+
+function SortableTaskItem(props: Parameters<typeof TaskItem>[0]) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.task.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 10 : undefined,
+    position: "relative",
+  };
+  const handle = (
+    <button
+      {...attributes} {...listeners}
+      className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+      tabIndex={-1}>
+      <GripVertical className="w-3.5 h-3.5" />
+    </button>
+  );
+  return <TaskItem {...props} dragRef={setNodeRef} dragStyle={style} dragHandle={handle} />;
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function TasksPage() {
@@ -448,6 +482,40 @@ export default function TasksPage() {
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingGroupName, setEditingGroupName] = useState("");
   const [activeTab, setActiveTab] = useState<"checklist" | "schedule">("checklist");
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const persistPositions = useCallback((tasks: Task[]) => {
+    tasks.forEach((t, i) => {
+      fetch(`/api/tasks/${t.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ position: i }),
+      });
+    });
+  }, []);
+
+  const handleUngroupedDragEnd = useCallback(({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    setUngrouped(tasks => {
+      const oldIdx = tasks.findIndex(t => t.id === active.id);
+      const newIdx = tasks.findIndex(t => t.id === over.id);
+      const reordered = arrayMove(tasks, oldIdx, newIdx).map((t, i) => ({ ...t, position: i }));
+      persistPositions(reordered);
+      return reordered;
+    });
+  }, [persistPositions]);
+
+  const handleGroupDragEnd = useCallback((groupId: string, { active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    setGroups(gs => gs.map(g => {
+      if (g.id !== groupId) return g;
+      const oldIdx = g.tasks.findIndex(t => t.id === active.id);
+      const newIdx = g.tasks.findIndex(t => t.id === over.id);
+      const reordered = arrayMove(g.tasks, oldIdx, newIdx).map((t, i) => ({ ...t, position: i }));
+      persistPositions(reordered);
+      return { ...g, tasks: reordered };
+    }));
+  }, [persistPositions]);
 
   useEffect(() => {
     fetch("/api/tasks").then(r => r.json()).then(data => {
@@ -578,7 +646,19 @@ export default function TasksPage() {
       <div className={`flex-col border-r border-border p-6 min-h-0 md:flex md:w-1/2 ${activeTab === "checklist" ? "flex flex-1 md:flex-none" : "hidden"}`}>
         <div className="flex items-center gap-2 mb-4 shrink-0">
           <CheckSquare className="w-5 h-5 text-primary" />
-          <h1 className="text-xl font-semibold">Daily Checklist</h1>
+          <h1 className="text-xl font-semibold flex-1">Daily Checklist</h1>
+          <button
+            onClick={() => {
+              if (window.confirm("Delete all tasks? This cannot be undone.")) {
+                setUngrouped([]);
+                setGroups(gs => gs.map(g => ({ ...g, tasks: [] })));
+                fetch("/api/tasks", { method: "DELETE" });
+              }
+            }}
+            title="Clear all tasks"
+            className="p-1.5 rounded-md border border-destructive/40 text-destructive hover:bg-destructive/10 transition-colors">
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Quick add */}
@@ -605,7 +685,11 @@ export default function TasksPage() {
                   <span className="text-xs text-muted-foreground">{ungrouped.filter(t => t.completed).length}/{ungrouped.length}</span>
                 </div>
                 <div className="py-1">
-                  {ungrouped.map(task => <TaskItem key={task.id} {...taskProps(task)} />)}
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleUngroupedDragEnd}>
+                    <SortableContext items={ungrouped.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                      {ungrouped.map(task => <SortableTaskItem key={task.id} {...taskProps(task)} />)}
+                    </SortableContext>
+                  </DndContext>
                 </div>
               </div>
             )}
@@ -641,7 +725,11 @@ export default function TasksPage() {
                   </div>
                   {!isCollapsed && (
                     <div className="py-1">
-                      {group.tasks.map(task => <TaskItem key={task.id} {...taskProps(task)} />)}
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={e => handleGroupDragEnd(group.id, e)}>
+                        <SortableContext items={group.tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                          {group.tasks.map(task => <SortableTaskItem key={task.id} {...taskProps(task)} />)}
+                        </SortableContext>
+                      </DndContext>
                       {addingToGroup === group.id ? (
                         <form onSubmit={e => { e.preventDefault(); addTask(groupTaskInput, group.id); setGroupTaskInput(""); setAddingToGroup(null); }}
                           className="flex items-center gap-2 px-3 py-2">
