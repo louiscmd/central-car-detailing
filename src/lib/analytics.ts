@@ -363,6 +363,69 @@ export async function get7DayViewsForClient(clientId: string): Promise<TimelineP
   return weekViewsForPosts(posts);
 }
 
+export interface PlatformViewsPoint {
+  date: string;
+  TIKTOK: number;
+  INSTAGRAM: number;
+  FACEBOOK: number;
+  YOUTUBE: number;
+  total: number;
+}
+
+export async function get7DayViewsByPlatform(userId: string): Promise<{
+  timeline: PlatformViewsPoint[];
+  totals: { TIKTOK: number; INSTAGRAM: number; FACEBOOK: number; YOUTUBE: number; total: number };
+}> {
+  const days = currentWeekDays();
+  const endOfWeek = new Date(days[6]);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  // Load ALL metrics (not just this week) so posts scraped before Monday still appear
+  const posts = await prisma.post.findMany({
+    where: { account: { client: { userId } } },
+    include: {
+      account: { select: { platform: true } },
+      metrics: {
+        where: { timestamp: { lte: endOfWeek } },
+        orderBy: { timestamp: "asc" },
+      },
+    },
+  });
+
+  const timeline: PlatformViewsPoint[] = days.map((day) => {
+    const endOfDay = new Date(day);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const point: PlatformViewsPoint = {
+      date: format(day, "MMM d"),
+      TIKTOK: 0, INSTAGRAM: 0, FACEBOOK: 0, YOUTUBE: 0, total: 0,
+    };
+
+    for (const post of posts) {
+      // Most recent metric on or before end of this day
+      let latest: { views: bigint | null } | undefined;
+      for (let i = post.metrics.length - 1; i >= 0; i--) {
+        if (post.metrics[i].timestamp <= endOfDay) { latest = post.metrics[i]; break; }
+      }
+      if (!latest) continue;
+
+      const views = bigIntToNumber(latest.views) ?? 0;
+      const plat = post.account.platform as keyof Omit<PlatformViewsPoint, "date" | "total">;
+      point[plat] += views;
+      point.total += views;
+    }
+
+    return point;
+  });
+
+  const last = timeline[timeline.length - 1];
+  const totals = last
+    ? { TIKTOK: last.TIKTOK, INSTAGRAM: last.INSTAGRAM, FACEBOOK: last.FACEBOOK, YOUTUBE: last.YOUTUBE, total: last.total }
+    : { TIKTOK: 0, INSTAGRAM: 0, FACEBOOK: 0, YOUTUBE: 0, total: 0 };
+
+  return { timeline, totals };
+}
+
 export async function get7DayViewsForAccount(accountId: string): Promise<TimelinePoint[]> {
   const days = currentWeekDays();
   const since = days[0];

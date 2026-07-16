@@ -1,9 +1,9 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getDashboardStats, get7DayViewsGlobal } from "@/lib/analytics";
+import { getDashboardStats, get7DayViewsByPlatform } from "@/lib/analytics";
 import { formatNumber, formatDate, platformLabel } from "@/lib/utils";
 import { StatsCard } from "@/components/dashboard/stats-card";
-import { ViewsChart } from "@/components/dashboard/views-chart";
+import { PlatformViewsChart } from "@/components/dashboard/platform-views-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, TrendingUp, Eye, Activity, ArrowRight } from "lucide-react";
@@ -17,9 +17,9 @@ export default async function DashboardPage() {
   const session = await auth();
   const userId = session!.user!.id!;
 
-  const [stats, globalViews, recentClients] = await Promise.all([
+  const [stats, viewsData, recentClients] = await Promise.all([
     getDashboardStats(userId),
-    get7DayViewsGlobal(userId),
+    get7DayViewsByPlatform(userId),
     prisma.client.findMany({
       where: { userId },
       take: 5,
@@ -81,10 +81,10 @@ export default async function DashboardPage() {
       {/* Global 7-day views chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Views — Last 7 Days (All Clients)</CardTitle>
+          <CardTitle className="text-base">Views — This Week (All Clients)</CardTitle>
         </CardHeader>
         <CardContent>
-          <ViewsChart data={globalViews} height={180} />
+          <PlatformViewsChart timeline={viewsData.timeline} totals={viewsData.totals} height={180} />
         </CardContent>
       </Card>
 
