@@ -162,8 +162,9 @@ export class InstagramScraper extends BaseScraper {
         return { success: false, error: "No Instagram Business/Creator account found. Switch your Instagram to a Business or Creator account and link it to a Facebook Page, then reconnect." };
       }
 
-      // Business Discovery: look up target username using our IG account
-      const fields = "business_discovery.fields(followers_count,follows_count,media_count,name,profile_picture_url,username,biography)";
+      // Business Discovery: profile + media with view counts
+      const mediaFields = "id,shortcode,media_type,thumbnail_url,media_url,timestamp,caption,like_count,comments_count,video_views";
+      const fields = `business_discovery.fields(followers_count,follows_count,media_count,name,profile_picture_url,username,biography,media.limit(20){${mediaFields}})`;
       const res = await fetch(
         `https://graph.facebook.com/v21.0/${igAccountId}?fields=${encodeURIComponent(fields)}&username=${encodeURIComponent(targetUsername)}&access_token=${pageToken}`,
         { signal: AbortSignal.timeout(12000) }
@@ -188,6 +189,20 @@ export class InstagramScraper extends BaseScraper {
       const followers = (bd.followers_count as number) ?? null;
       if (followers === null) return { success: false, error: "No follower count in Business Discovery response" };
 
+      const rawMedia = (bd.media as { data?: Record<string, unknown>[] })?.data ?? [];
+      const posts: ScrapedPost[] = rawMedia.map((m) => ({
+        externalId: (m.shortcode as string) ?? String(m.id),
+        url: `https://www.instagram.com/p/${m.shortcode ?? m.id}/`,
+        type: mapIgType(m.media_type as string),
+        caption: (m.caption as string) ?? null,
+        thumbnailUrl: (m.thumbnail_url as string) ?? (m.media_url as string) ?? null,
+        postedAt: m.timestamp ? new Date(m.timestamp as string) : null,
+        views: (m.video_views as number) ?? null,
+        likes: (m.like_count as number) ?? null,
+        comments: (m.comments_count as number) ?? null,
+        shares: null,
+      }));
+
       return {
         success: true,
         profile: {
@@ -199,7 +214,7 @@ export class InstagramScraper extends BaseScraper {
           totalLikes: null,
           postCount: (bd.media_count as number) ?? null,
         },
-        posts: [],
+        posts,
       };
     } catch (e) {
       return { success: false, error: `Business Discovery exception: ${e instanceof Error ? e.message : String(e)}` };
@@ -350,6 +365,27 @@ export class InstagramScraper extends BaseScraper {
 
     const data = (await res.json()) as Record<string, unknown>;
 
+    // Fetch media with view counts
+    const mediaRes = await fetch(
+      `https://graph.facebook.com/v21.0/${igAccountId}/media?fields=id,shortcode,media_type,thumbnail_url,media_url,timestamp,caption,like_count,comments_count,video_views&limit=20&access_token=${pageToken}`
+    );
+    let posts: ScrapedPost[] = [];
+    if (mediaRes.ok) {
+      const mediaData = await mediaRes.json() as { data?: Record<string, unknown>[] };
+      posts = (mediaData.data ?? []).map((m) => ({
+        externalId: (m.shortcode as string) ?? String(m.id),
+        url: `https://www.instagram.com/p/${m.shortcode ?? m.id}/`,
+        type: mapIgType(m.media_type as string),
+        caption: (m.caption as string) ?? null,
+        thumbnailUrl: (m.thumbnail_url as string) ?? (m.media_url as string) ?? null,
+        postedAt: m.timestamp ? new Date(m.timestamp as string) : null,
+        views: (m.video_views as number) ?? null,
+        likes: (m.like_count as number) ?? null,
+        comments: (m.comments_count as number) ?? null,
+        shares: null,
+      }));
+    }
+
     return {
       success: true,
       profile: {
@@ -361,7 +397,7 @@ export class InstagramScraper extends BaseScraper {
         totalLikes: null,
         postCount: (data.media_count as number) ?? null,
       },
-      posts: [],
+      posts,
     };
   }
 
