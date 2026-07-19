@@ -74,7 +74,9 @@ export default function BizHubPage() {
   const [history,    setHistory]    = useState<MonthRecord[]>(emptyHistory());
   const [liveChecks, setLiveChecks] = useState<PaycheckEntry[]>([]);
   const [flash,      setFlash]      = useState(false);
-  const [selectedBar, setSelectedBar] = useState<number | null>(null); // which bar is selected
+  const [selectedBar, setSelectedBar] = useState<number | null>(null);
+  const [histAmtInput,  setHistAmtInput]  = useState("");
+  const [histDescInput, setHistDescInput] = useState("");
 
   // ── Load from localStorage ────────────────────────────────────────────────
   useEffect(() => {
@@ -132,6 +134,35 @@ export default function BizHubPage() {
     const next = [...history];
     next[currentMonth] = { total: newTotal, paychecks: newPaychecks };
     persistHistory(next);
+  }
+
+  // ── Add paycheck to any month (from history panel) ───────────────────────
+  function addPaycheckToMonth(monthIdx: number) {
+    const amt = parseFloat(histAmtInput.replace(",", "."));
+    if (isNaN(amt) || amt <= 0 || !histDescInput.trim()) return;
+
+    const entry: PaycheckEntry = {
+      id: crypto.randomUUID(),
+      amount: amt,
+      description: histDescInput.trim(),
+      date: `${currentYear}-${String(monthIdx + 1).padStart(2, "0")}-01`,
+    };
+
+    const next = [...history];
+    const prev = next[monthIdx] ?? { total: 0, paychecks: [] };
+    const newTotal     = prev.total + amt;
+    const newPaychecks = [...prev.paychecks, entry];
+    next[monthIdx] = { total: newTotal, paychecks: newPaychecks };
+    persistHistory(next);
+
+    // Keep cashTotal in sync if editing current month
+    if (monthIdx === currentMonth) {
+      setCashTotal(newTotal);
+      setLiveChecks(newPaychecks);
+    }
+
+    setHistAmtInput("");
+    setHistDescInput("");
   }
 
   // ── Reset current month ───────────────────────────────────────────────────
@@ -274,10 +305,14 @@ export default function BizHubPage() {
                     }
                   }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    stroke="hsl(var(--border))"
+                  />
                   <YAxis
-                    tick={{ fontSize: 11 }}
-                    stroke="hsl(var(--muted-foreground))"
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    stroke="hsl(var(--border))"
                     tickFormatter={(v: number) => v >= 1000 ? `${Math.round(v / 1000)}k` : String(v)}
                     width={38}
                   />
@@ -380,12 +415,39 @@ export default function BizHubPage() {
                 )}
               </div>
 
+              {/* Add paycheck form — always visible for the viewed month */}
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <input
+                    type="number" min="0" value={histAmtInput}
+                    onChange={(e) => setHistAmtInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && histDescInput.trim() && addPaycheckToMonth(viewMonth)}
+                    placeholder="Amount…"
+                    className="w-28 shrink-0 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <input
+                    type="text" value={histDescInput}
+                    onChange={(e) => setHistDescInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && histAmtInput && addPaycheckToMonth(viewMonth)}
+                    placeholder="For what?"
+                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <button
+                  onClick={() => addPaycheckToMonth(viewMonth)}
+                  disabled={!histAmtInput || !histDescInput.trim()}
+                  className="w-full py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> Add to {MONTHS[viewMonth]}
+                </button>
+              </div>
+
+              {/* Entries */}
               {viewRecord.paychecks.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  {isViewingCurrent ? "No paychecks yet this month." : "No paychecks recorded for this month."}
+                <p className="text-sm text-muted-foreground py-2 text-center">
+                  No paychecks recorded yet.
                 </p>
               ) : (
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {viewRecord.paychecks.map((entry) => (
                     <div key={entry.id} className="flex items-center justify-between gap-3 py-2.5 px-3 rounded-lg bg-background border border-border">
                       <div className="min-w-0">
