@@ -69,7 +69,21 @@ function calculate(e: Estimate): Results {
   };
 }
 
-const fmt = (n: number) => `${Math.round(n).toLocaleString("pl-PL")} PLN`;
+const CURRENCIES = [
+  { code: "EUR", symbol: "€", label: "Euro (€)",    locale: "fr-FR", suffix: false },
+  { code: "USD", symbol: "$", label: "USD ($)",      locale: "en-US", suffix: false },
+  { code: "GBP", symbol: "£", label: "GBP (£)",      locale: "en-GB", suffix: false },
+  { code: "PLN", symbol: "zł", label: "PLN (zł)",   locale: "pl-PL", suffix: true  },
+] as const;
+type CurrencyCode = typeof CURRENCIES[number]["code"];
+
+function makeFmt(code: CurrencyCode) {
+  const c = CURRENCIES.find(x => x.code === code)!;
+  return (n: number) => {
+    const num = Math.round(n).toLocaleString(c.locale);
+    return c.suffix ? `${num} ${c.symbol}` : `${c.symbol}${num}`;
+  };
+}
 
 const confidenceColor = { Low: "text-yellow-500", Medium: "text-blue-500", High: "text-green-500" };
 const confidenceBg = { Low: "bg-yellow-500/10 border-yellow-500/30", Medium: "bg-blue-500/10 border-blue-500/30", High: "bg-green-500/10 border-green-500/30" };
@@ -82,6 +96,8 @@ export default function RevenueEstimatorPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<"inputs" | "results">("inputs");
+  const [currency, setCurrency] = useState<CurrencyCode>("EUR");
+  const fmt = makeFmt(currency);
 
   useEffect(() => {
     fetch("/api/clients").then(r => r.json()).then((data: { data: Client[] }) => {
@@ -179,13 +195,20 @@ export default function RevenueEstimatorPage() {
           <div className="bg-card border border-border rounded-xl p-4 space-y-4">
             <h2 className="font-semibold text-sm">Business Profile</h2>
             <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Currency</label>
+              <select value={currency} onChange={e => setCurrency(e.target.value as CurrencyCode)}
+                className="w-full bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Industry</label>
               <select value={estimate.industry} onChange={e => handleIndustryChange(e.target.value)}
                 className="w-full bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
                 {INDUSTRIES.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
               </select>
             </div>
-            {field("Average Order Value", "aov", "PLN")}
+            {field("Average Order Value", "aov", CURRENCIES.find(c => c.code === currency)?.symbol ?? currency)}
             {field("Monthly Customers", "monthlyCustomers", "customers")}
             {field("Profit Margin", "profitMargin", "%", 0.01, 0)}
           </div>
@@ -221,22 +244,23 @@ export default function RevenueEstimatorPage() {
               <p className="text-sm">Based on your recent growth, social media efforts may be generating approximately <strong>{results.additionalCustomersLow}–{results.additionalCustomersHigh} additional customers per month</strong>.</p>
               <p className="text-sm text-muted-foreground">Estimated additional revenue: <strong className="text-foreground">{fmt(results.monthlyRevenueMid)}/month</strong></p>
               <p className="text-sm text-muted-foreground">Estimated annual revenue impact: <strong className="text-foreground">{fmt(results.yearlyRevenueMid)}/year</strong></p>
+
             </div>
 
             {/* Stat cards */}
             <div className="grid grid-cols-2 gap-3">
               {[
                 { icon: Users, label: "Additional Customers/mo", low: results.additionalCustomersLow, mid: results.additionalCustomersMid, high: results.additionalCustomersHigh, suffix: "" },
-                { icon: DollarSign, label: "Monthly Revenue Increase", low: results.monthlyRevenueLow, mid: results.monthlyRevenueMid, high: results.monthlyRevenueHigh, suffix: " PLN" },
-                { icon: TrendingUp, label: "Annual Revenue Impact", low: results.yearlyRevenueLow, mid: results.yearlyRevenueMid, high: results.yearlyRevenueHigh, suffix: " PLN" },
-                { icon: TrendingUp, label: "Annual Profit Increase", low: results.profitLow, mid: results.profitMid, high: results.profitHigh, suffix: " PLN" },
+                { icon: DollarSign, label: "Monthly Revenue Increase", low: results.monthlyRevenueLow, mid: results.monthlyRevenueMid, high: results.monthlyRevenueHigh, suffix: true },
+                { icon: TrendingUp, label: "Annual Revenue Impact", low: results.yearlyRevenueLow, mid: results.yearlyRevenueMid, high: results.yearlyRevenueHigh, suffix: true },
+                { icon: TrendingUp, label: "Annual Profit Increase", low: results.profitLow, mid: results.profitMid, high: results.profitHigh, suffix: true },
               ].map(({ icon: Icon, label, low, mid, high, suffix }) => (
                 <div key={label} className="bg-card border border-border rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Icon className="w-4 h-4 text-primary" />
                     <span className="text-xs text-muted-foreground">{label}</span>
                   </div>
-                  <p className="text-xl font-bold">{suffix ? fmt(mid) : mid}</p>
+                  <p className="text-xl font-bold">{suffix ? fmt(mid) : String(mid)}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {suffix ? `${fmt(low)} – ${fmt(high)}` : `${low} – ${high}`}
                   </p>
@@ -252,7 +276,7 @@ export default function RevenueEstimatorPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                   <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={v => `${Math.round(v / 1000)}k`} />
-                  <Tooltip formatter={(v: number) => [`${v.toLocaleString("pl-PL")} PLN`]} />
+                  <Tooltip formatter={(v: number) => [fmt(v)]} />
                   <Area type="monotone" dataKey="high" stroke="#22c55e" fill="#22c55e20" name="High" strokeWidth={1.5} />
                   <Area type="monotone" dataKey="mid" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.15)" name="Mid" strokeWidth={2} />
                   <Area type="monotone" dataKey="low" stroke="#f59e0b" fill="#f59e0b20" name="Low" strokeWidth={1.5} />
