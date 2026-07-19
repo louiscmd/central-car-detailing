@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, RotateCcw, CheckSquare, Star, BookmarkCheck, X } from "lucide-react";
+import { Plus, RotateCcw, CheckSquare, Star, BookmarkCheck, X, Pencil, Trash2, Check } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell,
@@ -77,6 +77,10 @@ export default function BizHubPage() {
   const [selectedBar, setSelectedBar] = useState<number | null>(null);
   const [histAmtInput,  setHistAmtInput]  = useState("");
   const [histDescInput, setHistDescInput] = useState("");
+  const [editingId,   setEditingId]   = useState<string | null>(null);
+  const [editAmt,     setEditAmt]     = useState("");
+  const [editDesc,    setEditDesc]    = useState("");
+  const [editDate,    setEditDate]    = useState("");
 
   // ── Load from localStorage ────────────────────────────────────────────────
   useEffect(() => {
@@ -180,6 +184,58 @@ export default function BizHubPage() {
   function saveMonth() {
     setFlash(true);
     setTimeout(() => setFlash(false), 2000);
+  }
+
+  // ── Edit / delete paycheck entries ───────────────────────────────────────
+  function startEdit(entry: PaycheckEntry) {
+    setEditingId(entry.id);
+    setEditAmt(String(entry.amount));
+    setEditDesc(entry.description);
+    setEditDate(entry.date);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditAmt("");
+    setEditDesc("");
+    setEditDate("");
+  }
+
+  function saveEdit(monthIdx: number) {
+    if (!editingId) return;
+    const amt = parseFloat(editAmt.replace(",", "."));
+    if (isNaN(amt) || amt <= 0 || !editDesc.trim() || !editDate) return;
+
+    const next = [...history];
+    const rec = next[monthIdx] ?? { total: 0, paychecks: [] };
+    const updatedPaychecks = rec.paychecks.map((p) =>
+      p.id === editingId
+        ? { ...p, amount: amt, description: editDesc.trim(), date: editDate }
+        : p
+    );
+    const newTotal = updatedPaychecks.reduce((sum, p) => sum + p.amount, 0);
+    next[monthIdx] = { total: newTotal, paychecks: updatedPaychecks };
+    persistHistory(next);
+
+    if (monthIdx === currentMonth) {
+      setCashTotal(newTotal);
+      setLiveChecks(updatedPaychecks);
+    }
+    cancelEdit();
+  }
+
+  function deleteEntry(monthIdx: number, entryId: string) {
+    const next = [...history];
+    const rec = next[monthIdx] ?? { total: 0, paychecks: [] };
+    const updatedPaychecks = rec.paychecks.filter((p) => p.id !== entryId);
+    const newTotal = updatedPaychecks.reduce((sum, p) => sum + p.amount, 0);
+    next[monthIdx] = { total: newTotal, paychecks: updatedPaychecks };
+    persistHistory(next);
+
+    if (monthIdx === currentMonth) {
+      setCashTotal(newTotal);
+      setLiveChecks(updatedPaychecks);
+    }
   }
 
   // ── W day checklist ───────────────────────────────────────────────────────
@@ -447,18 +503,69 @@ export default function BizHubPage() {
                   No paychecks recorded yet.
                 </p>
               ) : (
-                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {viewRecord.paychecks.map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between gap-3 py-2.5 px-3 rounded-lg bg-background border border-border">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{entry.description}</p>
-                        <p className="text-xs text-muted-foreground">{entry.date}</p>
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {viewRecord.paychecks.map((entry) =>
+                    editingId === entry.id ? (
+                      /* ── Inline edit form ── */
+                      <div key={entry.id} className="flex flex-col gap-2 py-2.5 px-3 rounded-lg bg-background border border-primary/50">
+                        <div className="flex gap-2">
+                          <input
+                            type="number" min="0" value={editAmt}
+                            onChange={(e) => setEditAmt(e.target.value)}
+                            placeholder="Amount…"
+                            className="w-28 shrink-0 bg-card border border-border rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                          <input
+                            type="text" value={editDesc}
+                            onChange={(e) => setEditDesc(e.target.value)}
+                            placeholder="Description…"
+                            className="flex-1 bg-card border border-border rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+                        <input
+                          type="date" value={editDate}
+                          onChange={(e) => setEditDate(e.target.value)}
+                          className="bg-card border border-border rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveEdit(viewMonth)}
+                            disabled={!editAmt || !editDesc.trim() || !editDate}
+                            className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-medium hover:bg-primary/90 disabled:opacity-40 transition-colors flex items-center justify-center gap-1">
+                            <Check className="w-3 h-3" /> Save
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="flex-1 py-1.5 bg-accent text-foreground rounded-md text-xs font-medium hover:bg-accent/80 transition-colors flex items-center justify-center gap-1">
+                            <X className="w-3 h-3" /> Cancel
+                          </button>
+                        </div>
                       </div>
-                      <span className="text-sm font-bold text-primary shrink-0 tabular-nums">
-                        +{fmt(entry.amount)}
-                      </span>
-                    </div>
-                  ))}
+                    ) : (
+                      /* ── Normal row ── */
+                      <div key={entry.id} className="group flex items-center justify-between gap-3 py-2.5 px-3 rounded-lg bg-background border border-border">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{entry.description}</p>
+                          <p className="text-xs text-muted-foreground">{entry.date}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-sm font-bold text-primary tabular-nums">
+                            +{fmt(entry.amount)}
+                          </span>
+                          <button
+                            onClick={() => startEdit(entry)}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-foreground transition-all">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => { if (window.confirm("Delete this paycheck?")) deleteEntry(viewMonth, entry.id); }}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-destructive transition-all">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
               )}
 
