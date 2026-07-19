@@ -380,7 +380,10 @@ export default function BizHubPage() {
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "8px",
                       fontSize: 12,
+                      color: "hsl(var(--foreground))",
                     }}
+                    itemStyle={{ color: "hsl(var(--foreground))" }}
+                    labelStyle={{ color: "hsl(var(--muted-foreground))" }}
                   />
                   <Bar dataKey="revenue" radius={[4, 4, 0, 0]} style={{ cursor: "pointer" }}>
                     {chartData.map((entry, i) => (
