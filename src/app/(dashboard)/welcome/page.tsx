@@ -82,36 +82,70 @@ export default function BizHubPage() {
   const [editDesc,    setEditDesc]    = useState("");
   const [editDate,    setEditDate]    = useState("");
 
-  // ── Load from localStorage ────────────────────────────────────────────────
+  // ── Load from localStorage (instant) then sync from API ──────────────────
   useEffect(() => {
     setMounted(true);
+
+    // 1. Apply localStorage immediately for instant render
     const cur = localStorage.getItem("bizhub-currency") as CurrencyCode | null;
     if (cur && CURRENCIES.find((c) => c.code === cur)) setCurrency(cur);
 
     const hist = localStorage.getItem(historyKey(currentYear));
-    const loaded: MonthRecord[] = hist ? JSON.parse(hist) : emptyHistory();
-    // Ensure 12 slots exist
-    while (loaded.length < 12) loaded.push({ total: 0, paychecks: [] });
-    setHistory(loaded);
-
-    // Current month's live total is stored inside history's current slot while unsaved
-    setCashTotal(loaded[currentMonth]?.total ?? 0);
-    setLiveChecks(loaded[currentMonth]?.paychecks ?? []);
+    const localHist: MonthRecord[] = hist ? JSON.parse(hist) : emptyHistory();
+    while (localHist.length < 12) localHist.push({ total: 0, paychecks: [] });
+    setHistory(localHist);
+    setCashTotal(localHist[currentMonth]?.total ?? 0);
+    setLiveChecks(localHist[currentMonth]?.paychecks ?? []);
 
     const ch = localStorage.getItem(`w-day-${todayKey()}`);
     if (ch) setChecks(JSON.parse(ch));
+
+    // 2. Fetch from API in background (source of truth for cross-device sync)
+    const today = todayKey();
+    Promise.all([
+      fetch(`/api/bizhub/history?year=${currentYear}`).then(r => r.ok ? r.json() : null),
+      fetch(`/api/bizhub/wday/${today}`).then(r => r.ok ? r.json() : null),
+      fetch("/api/bizhub/prefs").then(r => r.ok ? r.json() : null),
+    ]).then(([histData, wdayData, prefsData]) => {
+      if (histData?.months) {
+        const months: MonthRecord[] = histData.months;
+        while (months.length < 12) months.push({ total: 0, paychecks: [] });
+        setHistory(months);
+        setCashTotal(months[currentMonth]?.total ?? 0);
+        setLiveChecks(months[currentMonth]?.paychecks ?? []);
+        localStorage.setItem(historyKey(currentYear), JSON.stringify(months));
+      }
+      if (wdayData?.checks) {
+        setChecks(wdayData.checks);
+        localStorage.setItem(`w-day-${today}`, JSON.stringify(wdayData.checks));
+      }
+      if (prefsData?.currency && CURRENCIES.find(c => c.code === prefsData.currency)) {
+        setCurrency(prefsData.currency as CurrencyCode);
+        localStorage.setItem("bizhub-currency", prefsData.currency);
+      }
+    }).catch(() => { /* offline — localStorage already loaded */ });
   }, [currentYear, currentMonth]);
 
   // ── Persist helpers ───────────────────────────────────────────────────────
   function persistHistory(next: MonthRecord[]) {
     setHistory(next);
     localStorage.setItem(historyKey(currentYear), JSON.stringify(next));
+    fetch(`/api/bizhub/history?year=${currentYear}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ months: next }),
+    });
   }
 
   // ── Currency ──────────────────────────────────────────────────────────────
   function changeCurrency(code: CurrencyCode) {
     setCurrency(code);
     localStorage.setItem("bizhub-currency", code);
+    fetch("/api/bizhub/prefs", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currency: code }),
+    });
   }
 
   // ── Add paycheck ──────────────────────────────────────────────────────────
@@ -242,7 +276,13 @@ export default function BizHubPage() {
   function toggleCheck(id: keyof typeof checks) {
     const updated = { ...checks, [id]: !checks[id] };
     setChecks(updated);
-    localStorage.setItem(`w-day-${todayKey()}`, JSON.stringify(updated));
+    const today = todayKey();
+    localStorage.setItem(`w-day-${today}`, JSON.stringify(updated));
+    fetch(`/api/bizhub/wday/${today}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ checks: updated }),
+    });
   }
 
   // ── Derived ───────────────────────────────────────────────────────────────

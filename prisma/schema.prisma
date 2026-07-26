@@ -49,6 +49,9 @@ model User {
   leads             Lead[]
   taskGroups        TaskGroup[]
   tasks             Task[]
+  bizHubHistory     BizHubHistory[]
+  bizHubWDays       BizHubWDay[]
+  bizHubPrefs       BizHubPrefs?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -371,6 +374,38 @@ model Task {
   @@index([userId, dueDate])
   @@index([userId, scheduledStart])
   @@map("tasks")
+}
+
+model BizHubHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  year      Int
+  months    Json
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year])
+  @@map("bizhub_history")
+}
+
+model BizHubWDay {
+  id     String @id @default(cuid())
+  userId String
+  date   String
+  checks Json
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("bizhub_wday")
+}
+
+model BizHubPrefs {
+  id       String @id @default(cuid())
+  userId   String @unique
+  currency String @default("EUR")
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bizhub_prefs")
 }
 
 model TerritorySettings {

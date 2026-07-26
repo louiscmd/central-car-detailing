@@ -7,8 +7,9 @@ import {
 } from "lucide-react";
 import {
   DndContext, PointerSensor, useSensor, useSensors, closestCenter,
+  DragOverlay, useDroppable,
 } from "@dnd-kit/core";
-import type { DragEndEvent } from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
@@ -482,8 +483,16 @@ export default function TasksPage() {
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingGroupName, setEditingGroupName] = useState("");
   const [activeTab, setActiveTab] = useState<"checklist" | "schedule">("checklist");
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [schedulingTask, setSchedulingTask] = useState<Task | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const { setNodeRef: setScheduleRef, isOver: isOverSchedule } = useDroppable({ id: "schedule-panel" });
+
+  const findTaskById = useCallback((id: string): Task | undefined => {
+    return ungrouped.find(t => t.id === id) ?? groups.flatMap(g => g.tasks).find(t => t.id === id);
+  }, [ungrouped, groups]);
 
   const persistPositions = useCallback((tasks: Task[]) => {
     tasks.forEach((t, i) => {
@@ -494,28 +503,48 @@ export default function TasksPage() {
     });
   }, []);
 
-  const handleUngroupedDragEnd = useCallback(({ active, over }: DragEndEvent) => {
-    if (!over || active.id === over.id) return;
-    setUngrouped(tasks => {
-      const oldIdx = tasks.findIndex(t => t.id === active.id);
-      const newIdx = tasks.findIndex(t => t.id === over.id);
-      const reordered = arrayMove(tasks, oldIdx, newIdx).map((t, i) => ({ ...t, position: i }));
-      persistPositions(reordered);
-      return reordered;
-    });
-  }, [persistPositions]);
+  const handleDragStart = useCallback(({ active }: DragStartEvent) => {
+    setActiveDragId(String(active.id));
+  }, []);
 
-  const handleGroupDragEnd = useCallback((groupId: string, { active, over }: DragEndEvent) => {
-    if (!over || active.id === over.id) return;
+  const handleDragEnd = useCallback(({ active, over }: DragEndEvent) => {
+    setActiveDragId(null);
+    if (!over) return;
+
+    const activeId = String(active.id);
+
+    // Dropped onto the schedule panel → open schedule modal
+    if (over.id === "schedule-panel") {
+      const task = findTaskById(activeId);
+      if (task) setSchedulingTask(task);
+      return;
+    }
+
+    const overId = String(over.id);
+    if (activeId === overId) return;
+
+    // Reorder within ungrouped
+    if (ungrouped.find(t => t.id === activeId) && ungrouped.find(t => t.id === overId)) {
+      setUngrouped(tasks => {
+        const oldIdx = tasks.findIndex(t => t.id === activeId);
+        const newIdx = tasks.findIndex(t => t.id === overId);
+        const reordered = arrayMove(tasks, oldIdx, newIdx).map((t, i) => ({ ...t, position: i }));
+        persistPositions(reordered);
+        return reordered;
+      });
+      return;
+    }
+
+    // Reorder within a group
     setGroups(gs => gs.map(g => {
-      if (g.id !== groupId) return g;
-      const oldIdx = g.tasks.findIndex(t => t.id === active.id);
-      const newIdx = g.tasks.findIndex(t => t.id === over.id);
+      if (!g.tasks.find(t => t.id === activeId) || !g.tasks.find(t => t.id === overId)) return g;
+      const oldIdx = g.tasks.findIndex(t => t.id === activeId);
+      const newIdx = g.tasks.findIndex(t => t.id === overId);
       const reordered = arrayMove(g.tasks, oldIdx, newIdx).map((t, i) => ({ ...t, position: i }));
       persistPositions(reordered);
       return { ...g, tasks: reordered };
     }));
-  }, [persistPositions]);
+  }, [ungrouped, groups, persistPositions, findTaskById]);
 
   useEffect(() => {
     fetch("/api/tasks").then(r => r.json()).then(data => {
@@ -625,7 +654,16 @@ export default function TasksPage() {
     onSchedule: (start: string | null, end: string | null) => scheduleTask(task, start, end),
   });
 
+  const activeDragTask = activeDragId ? findTaskById(activeDragId) : null;
+
   return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveDragId(null)}
+    >
     <div className="flex flex-col md:flex-row h-full -m-6 overflow-hidden">
 
       {/* ── Mobile tab bar ──────────────────────────────────── */}
@@ -685,11 +723,9 @@ export default function TasksPage() {
                   <span className="text-xs text-muted-foreground">{ungrouped.filter(t => t.completed).length}/{ungrouped.length}</span>
                 </div>
                 <div className="py-1">
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleUngroupedDragEnd}>
-                    <SortableContext items={ungrouped.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                      {ungrouped.map(task => <SortableTaskItem key={task.id} {...taskProps(task)} />)}
-                    </SortableContext>
-                  </DndContext>
+                  <SortableContext items={ungrouped.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                    {ungrouped.map(task => <SortableTaskItem key={task.id} {...taskProps(task)} />)}
+                  </SortableContext>
                 </div>
               </div>
             )}
@@ -725,11 +761,9 @@ export default function TasksPage() {
                   </div>
                   {!isCollapsed && (
                     <div className="py-1">
-                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={e => handleGroupDragEnd(group.id, e)}>
-                        <SortableContext items={group.tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                          {group.tasks.map(task => <SortableTaskItem key={task.id} {...taskProps(task)} />)}
-                        </SortableContext>
-                      </DndContext>
+                      <SortableContext items={group.tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                        {group.tasks.map(task => <SortableTaskItem key={task.id} {...taskProps(task)} />)}
+                      </SortableContext>
                       {addingToGroup === group.id ? (
                         <form onSubmit={e => { e.preventDefault(); addTask(groupTaskInput, group.id); setGroupTaskInput(""); setAddingToGroup(null); }}
                           className="flex items-center gap-2 px-3 py-2">
@@ -770,13 +804,44 @@ export default function TasksPage() {
       </div>
 
       {/* ── RIGHT: Daily Schedule ───────────────────────────── */}
-      <div className={`flex-col p-6 min-h-0 md:flex md:w-1/2 ${activeTab === "schedule" ? "flex flex-1 md:flex-none" : "hidden"}`}>
+      <div
+        ref={setScheduleRef}
+        className={`flex-col p-6 min-h-0 md:flex md:w-1/2 transition-colors ${
+          isOverSchedule ? "bg-primary/5 ring-2 ring-inset ring-primary/30" : ""
+        } ${activeTab === "schedule" ? "flex flex-1 md:flex-none" : "hidden"}`}
+      >
+        {activeDragId && isOverSchedule && (
+          <div className="shrink-0 mb-2 text-center text-xs text-primary font-medium animate-pulse">
+            Drop to schedule this task
+          </div>
+        )}
         <DayCalendar
           date={calendarDate}
           tasks={allTasks}
           onNavigate={setCalendarDate}
         />
       </div>
+
+      {/* DragOverlay — floats under cursor while dragging */}
+      <DragOverlay>
+        {activeDragTask && (
+          <div className="px-3 py-2 bg-card border border-primary rounded-lg shadow-xl text-sm font-medium opacity-95 pointer-events-none max-w-xs truncate">
+            {activeDragTask.title}
+          </div>
+        )}
+      </DragOverlay>
+
+      {/* Schedule modal triggered by drag-to-schedule */}
+      {schedulingTask && (
+        <ScheduleModal
+          task={schedulingTask}
+          calendarDate={calendarDate}
+          onSave={(start, end) => { scheduleTask(schedulingTask, start, end); setSchedulingTask(null); }}
+          onClear={() => { scheduleTask(schedulingTask, null, null); setSchedulingTask(null); }}
+          onClose={() => setSchedulingTask(null)}
+        />
+      )}
     </div>
+    </DndContext>
   );
 }
