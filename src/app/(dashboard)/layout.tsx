@@ -13,7 +13,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const role = (session.user as { role?: string })?.role;
   if (role === "CLIENT") redirect("/portal");
 
-  const isOwner = session.user?.email === process.env.OWNER_EMAIL;
+  const isOwner = role === "ADMIN";
 
   // Owner can still use perspective switcher; clear stale cookie for non-owners
   const jar = await cookies();
