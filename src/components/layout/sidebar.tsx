@@ -17,6 +17,7 @@ import {
   Kanban,
   CheckSquare,
   Home,
+  MessageSquare,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -32,6 +33,7 @@ const navItems = [
   { href: "/welcome", label: "Biz Hub", icon: Home },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
+  { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/reports", label: "Reports", icon: FileText },
   { href: "/deals", label: "Deal Tracker", icon: Kanban },
