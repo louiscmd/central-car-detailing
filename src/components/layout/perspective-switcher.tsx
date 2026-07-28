@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LayoutDashboard, User } from "lucide-react";
+import { ChevronDown, LayoutDashboard, User, Check } from "lucide-react";
 import { setViewAsClient } from "@/app/actions/view-as";
 
 interface Client {
@@ -35,8 +35,9 @@ export function PerspectiveSwitcher({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  if (!isManager) return null;
+
   const currentLabel = viewAsClientId ? (currentClientName ?? "Client") : "Manager";
-  const currentIcon = viewAsClientId ? <User className="w-3.5 h-3.5" /> : <LayoutDashboard className="w-3.5 h-3.5" />;
 
   async function switchToManager() {
     setOpen(false);
@@ -52,54 +53,66 @@ export function PerspectiveSwitcher({
     router.refresh();
   }
 
-  if (!isManager) return null;
-
   return (
     <div className="relative" ref={ref}>
+      {/* Trigger */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card hover:bg-accent transition-colors text-sm font-medium"
+        className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-card hover:bg-accent transition-colors"
       >
-        {currentIcon}
-        <span>{currentLabel}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+        <span className="text-sm font-semibold">{currentLabel}</span>
+        <ChevronDown
+          className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
+      {/* Dropdown */}
       {open && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-popover border border-border rounded-xl shadow-xl py-1.5 w-52">
-          {/* Manager option */}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-popover border border-border rounded-2xl shadow-2xl overflow-hidden w-60">
+          {/* Manager */}
           <button
             onClick={switchToManager}
-            className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm hover:bg-accent transition-colors text-left ${!viewAsClientId ? "text-primary font-medium" : "text-foreground"}`}
+            className="flex items-center gap-3 w-full px-4 py-3.5 hover:bg-accent transition-colors text-left"
           >
-            <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-              <LayoutDashboard className="w-3.5 h-3.5 text-primary" />
+            <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+              <LayoutDashboard className="w-4 h-4 text-primary" />
             </div>
-            <div>
-              <p className="text-sm font-medium leading-tight">Manager</p>
-              <p className="text-[10px] text-muted-foreground">Your dashboard</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold leading-tight">Manager</p>
+              <p className="text-xs text-muted-foreground">Your dashboard</p>
             </div>
-            {!viewAsClientId && <span className="ml-auto text-primary text-xs">✓</span>}
+            {!viewAsClientId && <Check className="w-4 h-4 text-primary shrink-0" />}
           </button>
 
           {clients.length > 0 && (
             <>
-              <div className="my-1.5 border-t border-border" />
-              <p className="px-3 pb-1 text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Clients</p>
+              <div className="border-t border-border mx-4" />
+              <div className="px-4 pt-2.5 pb-1">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Client view</p>
+              </div>
               {clients.map(client => (
                 <button
                   key={client.id}
                   onClick={() => switchToClient(client)}
-                  className={`flex items-center gap-2.5 w-full px-3 py-2 text-sm hover:bg-accent transition-colors text-left ${viewAsClientId === client.id ? "text-primary font-medium" : "text-foreground"}`}
+                  className="flex items-center gap-3 w-full px-4 py-3 hover:bg-accent transition-colors text-left"
                 >
-                  <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center shrink-0 text-xs font-bold text-muted-foreground">
+                  <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center shrink-0 text-xs font-bold">
                     {client.name.slice(0, 2).toUpperCase()}
                   </div>
-                  <span className="truncate">{client.name}</span>
-                  {viewAsClientId === client.id && <span className="ml-auto text-primary text-xs">✓</span>}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{client.name}</p>
+                    <p className="text-xs text-muted-foreground">Client portal</p>
+                  </div>
+                  {viewAsClientId === client.id && <Check className="w-4 h-4 text-primary shrink-0" />}
                 </button>
               ))}
             </>
+          )}
+
+          {clients.length === 0 && (
+            <div className="px-4 py-3 border-t border-border">
+              <p className="text-xs text-muted-foreground">No clients yet. Add one from the Clients page.</p>
+            </div>
           )}
         </div>
       )}

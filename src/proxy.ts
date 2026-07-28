@@ -5,6 +5,7 @@ import type { NextRequest } from "next/server";
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isAuth = !!req.auth;
+  const role = (req.auth?.user as { role?: string } | undefined)?.role;
 
   const publicPaths = ["/login", "/register", "/privacy"];
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
@@ -14,7 +15,15 @@ export default auth((req) => {
   }
 
   if (isAuth && isPublic) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    const dest = role === "CLIENT" ? "/portal" : "/dashboard";
+    return NextResponse.redirect(new URL(dest, req.url));
+  }
+
+  // CLIENT users can only access /portal and /api/portal
+  if (isAuth && role === "CLIENT") {
+    if (!pathname.startsWith("/portal") && !pathname.startsWith("/api/portal")) {
+      return NextResponse.redirect(new URL("/portal", req.url));
+    }
   }
 
   return NextResponse.next();
