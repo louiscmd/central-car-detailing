@@ -28,7 +28,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             clients={clients}
             viewAsClientId={null}
             currentClientName={undefined}
-            isOwner={true}
+            isOwner={role === "ADMIN"}
           />
           <main className="flex-1 overflow-y-auto p-6">{children}</main>
         </div>
