@@ -100,30 +100,64 @@ export default function BizHubPage() {
     const ch = localStorage.getItem(`w-day-${todayKey()}`);
     if (ch) setChecks(JSON.parse(ch));
 
-    // 2. Fetch from API in background (source of truth for cross-device sync)
+    // 2. Sync with API — DB is source of truth; if DB is empty, push localStorage up (migration)
     const today = todayKey();
+    const localHistRaw = localStorage.getItem(historyKey(currentYear));
+    const localChecksRaw = localStorage.getItem(`w-day-${today}`);
+    const localCurrency = localStorage.getItem("bizhub-currency");
+
     Promise.all([
       fetch(`/api/bizhub/history?year=${currentYear}`).then(r => r.ok ? r.json() : null),
       fetch(`/api/bizhub/wday/${today}`).then(r => r.ok ? r.json() : null),
       fetch("/api/bizhub/prefs").then(r => r.ok ? r.json() : null),
     ]).then(([histData, wdayData, prefsData]) => {
+
+      // ── Revenue history ──
       if (histData?.months) {
+        // DB has data → sync down to this device
         const months: MonthRecord[] = histData.months;
         while (months.length < 12) months.push({ total: 0, paychecks: [] });
         setHistory(months);
         setCashTotal(months[currentMonth]?.total ?? 0);
         setLiveChecks(months[currentMonth]?.paychecks ?? []);
         localStorage.setItem(historyKey(currentYear), JSON.stringify(months));
+      } else if (localHistRaw) {
+        // DB empty but localStorage has data → push up to DB (first-time migration)
+        const months: MonthRecord[] = JSON.parse(localHistRaw);
+        fetch(`/api/bizhub/history?year=${currentYear}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ months }),
+        });
       }
+
+      // ── W day checks ──
       if (wdayData?.checks) {
         setChecks(wdayData.checks);
         localStorage.setItem(`w-day-${today}`, JSON.stringify(wdayData.checks));
+      } else if (localChecksRaw) {
+        fetch(`/api/bizhub/wday/${today}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ checks: JSON.parse(localChecksRaw) }),
+        });
       }
+
+      // ── Currency preference ──
       if (prefsData?.currency && CURRENCIES.find(c => c.code === prefsData.currency)) {
+        // DB has preference → apply it on this device
         setCurrency(prefsData.currency as CurrencyCode);
         localStorage.setItem("bizhub-currency", prefsData.currency);
+      } else if (localCurrency && CURRENCIES.find(c => c.code === localCurrency)) {
+        // DB empty but localStorage has a preference → push up to DB
+        fetch("/api/bizhub/prefs", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currency: localCurrency }),
+        });
       }
-    }).catch(() => { /* offline — localStorage already loaded */ });
+
+    }).catch(() => { /* offline — localStorage data already showing */ });
   }, [currentYear, currentMonth]);
 
   // ── Persist helpers ───────────────────────────────────────────────────────
