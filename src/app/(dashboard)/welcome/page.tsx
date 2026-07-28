@@ -306,38 +306,38 @@ export default function BizHubPage() {
   if (!mounted) return null;
 
   return (
-    <div className="flex flex-col items-center min-h-full py-10">
-      <div className="w-full max-w-5xl space-y-8 px-2">
+    <div className="flex flex-col items-center min-h-full py-5 md:py-10">
+      <div className="w-full max-w-5xl space-y-5 md:space-y-8 px-3 md:px-4">
 
         {/* ── Header + currency ─────────────────────────────────── */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Biz Hub</h1>
-            <p className="text-muted-foreground mt-1 text-sm">Your personal daily hub.</p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Biz Hub</h1>
+            <p className="text-muted-foreground mt-0.5 text-sm">Your personal daily hub.</p>
           </div>
           <select
             value={currency}
             onChange={(e) => changeCurrency(e.target.value as CurrencyCode)}
-            className="bg-card border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer">
+            className="bg-card border border-border rounded-lg px-2 py-1.5 md:px-3 md:py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer shrink-0">
             {CURRENCIES.map((c) => (
               <option key={c.code} value={c.code}>{c.label}</option>
             ))}
           </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-start">
 
           {/* ═══ LEFT COLUMN ════════════════════════════════════ */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4 md:gap-6">
 
             {/* Cash collected */}
-            <div className="bg-card border border-border rounded-2xl p-8 flex flex-col gap-6">
+            <div className="bg-card border border-border rounded-2xl p-5 md:p-8 flex flex-col gap-5 md:gap-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Cash collected</h2>
-                <span className="text-sm text-muted-foreground">{monthLabel}</span>
+                <span className="text-xs md:text-sm text-muted-foreground">{monthLabel}</span>
               </div>
 
-              <div className="text-6xl font-bold tracking-tight tabular-nums leading-none">
+              <div className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight tabular-nums leading-none">
                 {fmt(cashTotal)}
               </div>
 
@@ -349,14 +349,14 @@ export default function BizHubPage() {
                     onChange={(e) => setAmtInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && descInput.trim() && addPaycheck()}
                     placeholder="Amount…"
-                    className="w-32 shrink-0 bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-28 md:w-32 shrink-0 bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                   <input
                     type="text" value={descInput}
                     onChange={(e) => setDescInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && amtInput && addPaycheck()}
                     placeholder="For what?"
-                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="flex-1 min-w-0 bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 <button
@@ -384,10 +384,10 @@ export default function BizHubPage() {
             </div>
 
             {/* Monthly revenue bar chart */}
-            <div className="bg-card border border-border rounded-2xl p-8 flex flex-col gap-5">
+            <div className="bg-card border border-border rounded-2xl p-5 md:p-8 flex flex-col gap-4 md:gap-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Revenue {currentYear}</h2>
-                <span className="text-xs text-muted-foreground">Click a bar to see history</span>
+                <span className="text-xs text-muted-foreground hidden sm:inline">Click a bar to see history</span>
               </div>
 
               <ResponsiveContainer width="100%" height={200}>
@@ -448,23 +448,23 @@ export default function BizHubPage() {
           </div>
 
           {/* ═══ RIGHT COLUMN ════════════════════════════════════ */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4 md:gap-6">
 
             {/* W day checklist */}
-            <div className="bg-card border border-border rounded-2xl p-8 flex flex-col gap-7">
+            <div className="bg-card border border-border rounded-2xl p-5 md:p-8 flex flex-col gap-5 md:gap-7">
               <div className="flex items-center gap-2.5">
                 <CheckSquare className="w-5 h-5 text-primary" />
                 <h2 className="text-lg font-semibold">W day checklist</h2>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {W_ITEMS.map((item, i) => {
                   const checked = checks[item.id as keyof typeof checks];
                   return (
                     <button
                       key={item.id}
                       onClick={() => toggleCheck(item.id as keyof typeof checks)}
-                      className="flex items-center gap-4 w-full text-left group">
+                      className="flex items-center gap-3 md:gap-4 w-full text-left group">
                       <div className={`shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
                         checked ? "bg-primary border-primary" : "border-border group-hover:border-primary/60"
                       }`}>
@@ -474,7 +474,7 @@ export default function BizHubPage() {
                           </svg>
                         )}
                       </div>
-                      <span className={`text-base transition-colors select-none ${
+                      <span className={`text-sm md:text-base transition-colors select-none ${
                         checked ? "line-through text-muted-foreground" : "text-foreground"
                       }`}>
                         {i + 1}. {item.label}
@@ -485,16 +485,16 @@ export default function BizHubPage() {
               </div>
 
               {allChecked && (
-                <div className="pt-5 border-t border-border flex items-center gap-2.5 text-amber-400 animate-fade-in">
+                <div className="pt-4 border-t border-border flex items-center gap-2.5 text-amber-400 animate-fade-in">
                   <Star className="w-5 h-5 fill-amber-400" />
-                  <span className="text-base font-bold tracking-wide">W day legend</span>
+                  <span className="text-sm md:text-base font-bold tracking-wide">W day legend</span>
                   <Star className="w-5 h-5 fill-amber-400" />
                 </div>
               )}
             </div>
 
             {/* Paycheck history */}
-            <div className="bg-card border border-border rounded-2xl p-8 flex flex-col gap-5">
+            <div className="bg-card border border-border rounded-2xl p-5 md:p-8 flex flex-col gap-4 md:gap-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Paycheck history</h2>
                 {selectedBar !== null && (
