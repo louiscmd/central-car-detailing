@@ -13,10 +13,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const role = (session.user as { role?: string })?.role;
   if (role === "CLIENT") redirect("/portal");
 
-  // Clear any stale portal preview cookie — dashboard always means Manager view
-  const jar = await cookies();
-  jar.delete("view-as-client");
-
   const clients = await prisma.client.findMany({
     where: { userId: session.user!.id },
     select: { id: true, name: true },
