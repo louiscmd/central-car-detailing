@@ -15,7 +15,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
@@ -26,24 +26,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
           token.clientId = portal?.clientId;
         }
-        return token;
       }
-      // On every token refresh (not fresh login), verify user still exists.
-      // Guards against stale JWTs after a DB wipe or account deletion.
+      // Refresh username/bio from DB on every token cycle or explicit update
       if (token.id) {
-        const exists = await prisma.user.findUnique({
+        const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { id: true },
+          select: { id: true, username: true, bio: true, avatarUrl: true, role: true },
         });
-        if (!exists) return null; // invalidates session → redirect to login
+        if (!dbUser) return null; // invalidates session
+        token.username = dbUser.username;
+        token.bio = dbUser.bio;
+        token.avatarUrl = dbUser.avatarUrl;
+        token.role = dbUser.role; // keep role in sync
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        (session.user as { role?: string; clientId?: string }).role = token.role as string;
-        (session.user as { role?: string; clientId?: string }).clientId = token.clientId as string | undefined;
+        (session.user as { role?: string; clientId?: string; username?: string; bio?: string; avatarUrl?: string }).role = token.role as string;
+        (session.user as { role?: string; clientId?: string; username?: string; bio?: string; avatarUrl?: string }).clientId = token.clientId as string | undefined;
+        (session.user as { role?: string; clientId?: string; username?: string; bio?: string; avatarUrl?: string }).username = token.username as string | undefined;
+        (session.user as { role?: string; clientId?: string; username?: string; bio?: string; avatarUrl?: string }).bio = token.bio as string | undefined;
+        (session.user as { role?: string; clientId?: string; username?: string; bio?: string; avatarUrl?: string }).avatarUrl = token.avatarUrl as string | undefined;
       }
       return session;
     },

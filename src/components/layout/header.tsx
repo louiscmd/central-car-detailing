@@ -2,7 +2,7 @@
 
 import { signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
-import { Bell, LogOut, User } from "lucide-react";
+import { LogOut, User, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,8 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PerspectiveSwitcher } from "@/components/layout/perspective-switcher";
+import { NotificationBell } from "@/components/layout/notification-bell";
 
 interface ClientItem { id: string; name: string; }
 
@@ -58,14 +59,15 @@ export function Header({ title, clients = [], viewAsClientId = null, currentClie
 
       {/* Right */}
       <div className="flex items-center gap-2 flex-1 justify-end">
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="w-4 h-4" />
-        </Button>
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
               <Avatar className="h-9 w-9">
+                {(session?.user as { avatarUrl?: string })?.avatarUrl && (
+                  <AvatarImage src={(session?.user as { avatarUrl?: string })?.avatarUrl ?? ""} />
+                )}
                 <AvatarFallback className="bg-primary/20 text-primary text-sm">
                   {initials}
                 </AvatarFallback>
@@ -79,11 +81,19 @@ export function Header({ title, clients = [], viewAsClientId = null, currentClie
                   {session?.user?.name ?? "User"}
                 </p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {session?.user?.email}
+                  {(session?.user as { username?: string })?.username
+                    ? `@${(session?.user as { username?: string })?.username}`
+                    : session?.user?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a href="/partners" className="cursor-pointer">
+                <Users className="mr-2 h-4 w-4" />
+                Partners
+              </a>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <a href="/settings" className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />

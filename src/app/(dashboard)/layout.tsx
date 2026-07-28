@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { NextAuthSessionProvider } from "@/components/layout/session-provider";
+import { UsernamePrompt } from "@/components/layout/username-prompt";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -30,6 +30,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             currentClientName={undefined}
             isOwner={role === "ADMIN"}
           />
+          <UsernamePrompt />
           <main className="flex-1 overflow-y-auto p-6">{children}</main>
         </div>
       </div>

@@ -1,14 +1,15 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState } from "react";
-import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Loader2, RefreshCw, CheckCircle2, AlertCircle, AtSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 
 interface SyncResult {
@@ -33,6 +34,43 @@ export default function SettingsPage() {
   });
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+
+  const [profileForm, setProfileForm] = useState({ username: "", name: "", bio: "" });
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    const u = session?.user as { username?: string; bio?: string } | undefined;
+    setProfileForm({
+      username: u?.username ?? "",
+      name: session?.user?.name ?? "",
+      bio: u?.bio ?? "",
+    });
+  }, [session]);
+
+  async function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingProfile(true);
+    try {
+      const res = await fetch("/api/settings/username", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: profileForm.username || undefined,
+          name: profileForm.name || undefined,
+          bio: profileForm.bio || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Profile updated!" });
+      await update();
+    } finally {
+      setSavingProfile(false);
+    }
+  }
 
   async function syncPsids() {
     setSyncing(true);
@@ -97,22 +135,83 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Profile */}
+      {/* Identity / Username */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Profile</CardTitle>
-          <CardDescription>Your account details.</CardDescription>
+          <CardTitle className="text-base flex items-center gap-2">
+            <AtSign className="w-4 h-4 text-primary" />
+            Your Identity
+          </CardTitle>
+          <CardDescription>
+            Set your @username so partners can find and invite you. Usernames are public.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold text-xl">
-              {session?.user?.name?.[0]?.toUpperCase() ?? "U"}
+        <form onSubmit={handleSaveProfile}>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold text-xl shrink-0">
+                {session?.user?.name?.[0]?.toUpperCase() ?? "U"}
+              </div>
+              <div>
+                <p className="font-semibold">{session?.user?.name ?? "—"}</p>
+                <p className="text-sm text-muted-foreground">
+                  {(session?.user as { username?: string })?.username
+                    ? `@${(session?.user as { username?: string })?.username}`
+                    : "No username set"}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold">{session?.user?.name}</p>
-              <p className="text-sm text-muted-foreground">{session?.user?.email}</p>
+            <Separator />
+            <div className="space-y-2">
+              <Label>Display Name</Label>
+              <Input
+                placeholder="Your name"
+                value={profileForm.name}
+                onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))}
+              />
             </div>
-          </div>
+            <div className="space-y-2">
+              <Label>Username</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                <Input
+                  className="pl-7"
+                  placeholder="yourhandle"
+                  value={profileForm.username}
+                  onChange={e => setProfileForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") }))}
+                  maxLength={20}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">3–20 characters, letters, numbers, underscores.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Bio</Label>
+              <Textarea
+                placeholder="Tell partners about yourself..."
+                value={profileForm.bio}
+                onChange={e => setProfileForm(f => ({ ...f, bio: e.target.value }))}
+                className="resize-none"
+                rows={3}
+                maxLength={160}
+              />
+              <p className="text-xs text-muted-foreground">{profileForm.bio.length}/160</p>
+            </div>
+            <Button type="submit" disabled={savingProfile}>
+              {savingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Profile
+            </Button>
+          </CardContent>
+        </form>
+      </Card>
+
+      {/* Profile (read-only summary) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Account</CardTitle>
+          <CardDescription>Your login credentials.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-1 text-sm text-muted-foreground">
+          <p>Email: <span className="text-foreground">{session?.user?.email}</span></p>
         </CardContent>
       </Card>
 
