@@ -516,20 +516,20 @@ export default function BizHubPage() {
 
               {/* Add paycheck form — always visible for the viewed month */}
               <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="number" min="0" value={histAmtInput}
                     onChange={(e) => setHistAmtInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && histDescInput.trim() && addPaycheckToMonth(viewMonth)}
                     placeholder="Amount…"
-                    className="w-28 shrink-0 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full sm:w-28 shrink-0 bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                   <input
                     type="text" value={histDescInput}
                     onChange={(e) => setHistDescInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && histAmtInput && addPaycheckToMonth(viewMonth)}
                     placeholder="For what?"
-                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full sm:flex-1 bg-background border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 <button
