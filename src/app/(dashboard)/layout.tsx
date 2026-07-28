@@ -13,18 +13,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const role = (session.user as { role?: string })?.role;
   if (role === "CLIENT") redirect("/portal");
 
+  // Clear any stale portal preview cookie — dashboard always means Manager view
   const jar = await cookies();
-  const viewAsClientId = jar.get("view-as-client")?.value ?? null;
+  jar.delete("view-as-client");
 
   const clients = await prisma.client.findMany({
     where: { userId: session.user!.id },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });
-
-  const currentClientName = viewAsClientId
-    ? clients.find(c => c.id === viewAsClientId)?.name
-    : undefined;
 
   return (
     <NextAuthSessionProvider>
@@ -33,8 +30,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="flex-1 flex flex-col md:ml-64 overflow-hidden">
           <Header
             clients={clients}
-            viewAsClientId={viewAsClientId}
-            currentClientName={currentClientName}
+            viewAsClientId={null}
+            currentClientName={undefined}
             isOwner={true}
           />
           <main className="flex-1 overflow-y-auto p-6">{children}</main>
