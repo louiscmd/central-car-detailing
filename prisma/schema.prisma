@@ -10,6 +10,7 @@ datasource db {
 enum Role {
   ADMIN
   USER
+  CLIENT
 }
 
 enum Platform {
@@ -52,6 +53,8 @@ model User {
   bizHubHistory     BizHubHistory[]
   bizHubWDays       BizHubWDay[]
   bizHubPrefs       BizHubPrefs?
+  clientPortal      ClientPortal?
+  sentMessages      ChatMessage[]   @relation("MessageSender")
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -98,6 +101,8 @@ model Client {
   accounts         SocialAccount[]
   reports          Report[]
   revenueEstimate  RevenueEstimate?
+  clientPortal     ClientPortal?
+  chatMessages     ChatMessage[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -374,6 +379,31 @@ model Task {
   @@index([userId, dueDate])
   @@index([userId, scheduledStart])
   @@map("tasks")
+}
+
+model ClientPortal {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  clientId  String   @unique
+  invitedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("client_portals")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation("MessageSender", fields: [senderId], references: [id])
+  content   String   @db.Text
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([clientId, createdAt])
+  @@map("chat_messages")
 }
 
 model BizHubHistory {

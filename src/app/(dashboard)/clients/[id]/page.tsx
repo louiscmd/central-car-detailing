@@ -15,6 +15,8 @@ import {
   StickyNote,
   BarChart3,
   Link2,
+  UserPlus,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,6 +83,10 @@ export default function ClientDetailPage() {
     username: "",
     profileUrl: "",
   });
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [inviteResult, setInviteResult] = useState<{ email: string; tempPassword?: string; alreadyInvited?: boolean } | null>(null);
 
   async function fetchClient() {
     const [clientRes, viewsRes] = await Promise.all([
@@ -167,6 +173,26 @@ export default function ClientDetailPage() {
     }
   }
 
+  async function handleInvite() {
+    if (!inviteEmail.trim()) return;
+    setInviting(true);
+    try {
+      const res = await fetch(`/api/clients/${id}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail.trim() }),
+      });
+      const data = await res.json() as { email?: string; tempPassword?: string; alreadyInvited?: boolean; error?: string };
+      if (!res.ok) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      } else {
+        setInviteResult({ email: data.email!, tempPassword: data.tempPassword, alreadyInvited: data.alreadyInvited });
+      }
+    } finally {
+      setInviting(false);
+    }
+  }
+
   async function handleDelete() {
     setConfirmDelete(true);
   }
@@ -188,6 +214,62 @@ export default function ClientDetailPage() {
 
   return (
     <>
+    {/* Invite dialog */}
+    <Dialog open={inviteOpen} onOpenChange={open => { setInviteOpen(open); if (!open) { setInviteResult(null); setInviteEmail(""); } }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Invite {client?.name} to Portal</DialogTitle>
+          <DialogDescription>
+            {inviteResult
+              ? inviteResult.alreadyInvited
+                ? "This client already has portal access."
+                : "Portal account created! Share these credentials with your client."
+              : "Enter the client's email address to create their portal account."}
+          </DialogDescription>
+        </DialogHeader>
+        {inviteResult ? (
+          <div className="space-y-3 py-2">
+            <div className="rounded-lg bg-muted p-4 space-y-2 text-sm font-mono">
+              <div><span className="text-muted-foreground">Email: </span>{inviteResult.email}</div>
+              {inviteResult.tempPassword && (
+                <div><span className="text-muted-foreground">Password: </span>{inviteResult.tempPassword}</div>
+              )}
+            </div>
+            {!inviteResult.alreadyInvited && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Check className="w-3 h-3 text-green-500" />
+                Share these credentials with your client — they can change their password after logging in.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Client email address</Label>
+              <Input
+                type="email"
+                placeholder="client@example.com"
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") void handleInvite(); }}
+              />
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setInviteOpen(false)}>
+            {inviteResult ? "Close" : "Cancel"}
+          </Button>
+          {!inviteResult && (
+            <Button onClick={() => void handleInvite()} disabled={inviting || !inviteEmail.trim()}>
+              {inviting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+              Send Invite
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
       <DialogContent>
         <DialogHeader>
@@ -234,6 +316,14 @@ export default function ClientDetailPage() {
         </div>
 
         <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setInviteOpen(true)}
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Invite to Portal
+          </Button>
           <Button
             variant="outline"
             size="sm"

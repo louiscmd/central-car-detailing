@@ -19,6 +19,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
+        if ((user as { role?: string }).role === "CLIENT") {
+          const portal = await prisma.clientPortal.findUnique({
+            where: { userId: user.id as string },
+            select: { clientId: true },
+          });
+          token.clientId = portal?.clientId;
+        }
         return token;
       }
       // On every token refresh (not fresh login), verify user still exists.
@@ -35,7 +42,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        (session.user as { role?: string }).role = token.role as string;
+        (session.user as { role?: string; clientId?: string }).role = token.role as string;
+        (session.user as { role?: string; clientId?: string }).clientId = token.clientId as string | undefined;
       }
       return session;
     },
