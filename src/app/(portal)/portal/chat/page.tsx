@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { FullChatWindow } from "@/components/portal/full-chat-window";
 
@@ -7,10 +8,16 @@ export default async function PortalChatPage() {
   if (!session?.user?.id) redirect("/login");
 
   const role = (session.user as { role?: string; clientId?: string })?.role;
-  if (role !== "CLIENT") redirect("/dashboard");
+  let clientId: string | null = null;
 
-  const clientId = (session.user as { clientId?: string })?.clientId;
-  if (!clientId) redirect("/login");
+  if (role === "CLIENT") {
+    clientId = (session.user as { clientId?: string })?.clientId ?? null;
+  } else {
+    const jar = await cookies();
+    clientId = jar.get("view-as-client")?.value ?? null;
+  }
+
+  if (!clientId) redirect("/dashboard");
 
   return (
     <div className="h-full flex flex-col gap-3">
