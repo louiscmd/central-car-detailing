@@ -17,6 +17,7 @@ import {
   Link2,
   UserPlus,
   Check,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -316,6 +317,12 @@ export default function ClientDetailPage() {
         </div>
 
         <div className="flex gap-2 flex-wrap">
+          <Link href={`/clients/${id}/chat`}>
+            <Button variant="outline" size="sm">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Chat
+            </Button>
+          </Link>
           <Button
             variant="outline"
             size="sm"

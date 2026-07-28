@@ -22,9 +22,10 @@ interface HeaderProps {
   clients?: ClientItem[];
   viewAsClientId?: string | null;
   currentClientName?: string;
+  isOwner?: boolean;
 }
 
-export function Header({ title, clients = [], viewAsClientId = null, currentClientName }: HeaderProps) {
+export function Header({ title, clients = [], viewAsClientId = null, currentClientName, isOwner = false }: HeaderProps) {
   const { data: session } = useSession();
   const role = (session?.user as { role?: string })?.role;
   const isManager = role === "USER" || role === "ADMIN";
@@ -43,15 +44,17 @@ export function Header({ title, clients = [], viewAsClientId = null, currentClie
         {title && <h1 className="text-base font-semibold hidden md:block">{title}</h1>}
       </div>
 
-      {/* Center — perspective switcher */}
-      <div className="absolute left-1/2 -translate-x-1/2">
-        <PerspectiveSwitcher
-          clients={clients}
-          viewAsClientId={viewAsClientId}
-          currentClientName={currentClientName}
-          isManager={isManager}
-        />
-      </div>
+      {/* Center — perspective switcher (owner only, floats above header) */}
+      {isOwner && (
+        <div className="absolute left-1/2 -translate-x-1/2">
+          <PerspectiveSwitcher
+            clients={clients}
+            viewAsClientId={viewAsClientId}
+            currentClientName={currentClientName}
+            isManager={isManager}
+          />
+        </div>
+      )}
 
       {/* Right */}
       <div className="flex items-center gap-2 flex-1 justify-end">

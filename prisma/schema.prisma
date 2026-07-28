@@ -28,6 +28,13 @@ enum PostType {
   SHORT
 }
 
+enum AttachmentType {
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+}
+
 enum SnapshotStatus {
   SUCCESS
   FAILED
@@ -55,6 +62,7 @@ model User {
   bizHubPrefs       BizHubPrefs?
   clientPortal      ClientPortal?
   sentMessages      ChatMessage[]   @relation("MessageSender")
+  createdChannels   Channel[]       @relation("ChannelCreator")
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -102,6 +110,7 @@ model Client {
   reports          Report[]
   revenueEstimate  RevenueEstimate?
   clientPortal     ClientPortal?
+  channels         Channel[]
   chatMessages     ChatMessage[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
@@ -392,18 +401,50 @@ model ClientPortal {
   @@map("client_portals")
 }
 
-model ChatMessage {
-  id        String   @id @default(cuid())
-  clientId  String
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  senderId  String
-  sender    User     @relation("MessageSender", fields: [senderId], references: [id])
-  content   String   @db.Text
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+model Channel {
+  id          String        @id @default(cuid())
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name        String
+  createdById String
+  createdBy   User          @relation("ChannelCreator", fields: [createdById], references: [id])
+  messages    ChatMessage[]
+  createdAt   DateTime      @default(now())
 
+  @@unique([clientId, name])
+  @@index([clientId])
+  @@map("channels")
+}
+
+model ChatMessage {
+  id          String       @id @default(cuid())
+  channelId   String?
+  channel     Channel?     @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  clientId    String
+  client      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User         @relation("MessageSender", fields: [senderId], references: [id])
+  content     String?      @db.Text
+  attachments Attachment[]
+  read        Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+
+  @@index([channelId, createdAt])
   @@index([clientId, createdAt])
   @@map("chat_messages")
+}
+
+model Attachment {
+  id        String         @id @default(cuid())
+  messageId String
+  message   ChatMessage    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  url       String
+  type      AttachmentType
+  filename  String
+  size      Int
+  createdAt DateTime       @default(now())
+
+  @@map("attachments")
 }
 
 model BizHubHistory {

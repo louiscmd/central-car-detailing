@@ -63,6 +63,16 @@ export async function POST(
     select: { id: true, email: true },
   });
 
+  // Seed default channels
+  await prisma.channel.createMany({
+    data: [
+      { clientId: client.id, name: "general", createdById: session.user.id },
+      { clientId: client.id, name: "reports", createdById: session.user.id },
+      { clientId: client.id, name: "content", createdById: session.user.id },
+    ],
+    skipDuplicates: true,
+  });
+
   return NextResponse.json({
     success: true,
     email: portalUser.email,

@@ -13,14 +13,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const role = (session.user as { role?: string })?.role;
   if (role === "CLIENT") redirect("/portal");
 
-  const jar = await cookies();
-  const viewAsClientId = jar.get("view-as-client")?.value ?? null;
+  const isOwner = session.user?.email === process.env.OWNER_EMAIL;
 
-  const clients = await prisma.client.findMany({
-    where: { userId: session.user!.id },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
+  // Owner can still use perspective switcher; clear stale cookie for non-owners
+  const jar = await cookies();
+  const viewAsClientId = isOwner ? (jar.get("view-as-client")?.value ?? null) : null;
+
+  const clients = isOwner
+    ? await prisma.client.findMany({
+        where: { userId: session.user!.id },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      })
+    : [];
 
   const currentClientName = viewAsClientId
     ? clients.find(c => c.id === viewAsClientId)?.name
@@ -35,6 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             clients={clients}
             viewAsClientId={viewAsClientId}
             currentClientName={currentClientName}
+            isOwner={isOwner}
           />
           <main className="flex-1 overflow-y-auto p-6">{children}</main>
         </div>
