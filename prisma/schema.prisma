@@ -69,6 +69,7 @@ model User {
   sentPartnerships      Partnership[] @relation("PartnershipInviter")
   receivedPartnerships  Partnership[] @relation("PartnershipInvitee")
   notifications         Notification[]
+  pushSubscriptions     PushSubscription[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -543,4 +544,17 @@ model Notification {
 
   @@index([userId, read, createdAt])
   @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }

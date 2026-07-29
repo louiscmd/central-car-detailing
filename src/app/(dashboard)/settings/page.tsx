@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { PushToggle } from "@/components/settings/push-toggle";
 
 interface SyncResult {
   ok: boolean;
@@ -202,6 +203,19 @@ export default function SettingsPage() {
             </Button>
           </CardContent>
         </form>
+      </Card>
+
+      {/* Push Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Push Notifications</CardTitle>
+          <CardDescription>
+            Get notified on this device when things happen — invites, messages, reports.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PushToggle />
+        </CardContent>
       </Card>
 
       {/* Profile (read-only summary) */}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendPushToUser } from "@/lib/push";
 
 export async function GET() {
   const session = await auth();
@@ -53,15 +54,25 @@ export async function POST(req: Request) {
   });
 
   const inviterName = (await prisma.user.findUnique({ where: { id: userId }, select: { name: true, username: true } }));
+  const displayName = inviterName?.name ?? (inviterName?.username ? `@${inviterName.username}` : "Someone");
+
   await prisma.notification.create({
     data: {
       userId: target.id,
       type: "PARTNERSHIP_INVITE",
       title: "Partnership invite",
-      body: `${inviterName?.name ?? inviterName?.username ?? "Someone"} sent you a partnership invite.`,
+      body: `${displayName} sent you a partnership invite.`,
       link: "/partners",
     },
   });
+
+  // Fire-and-forget push
+  sendPushToUser(target.id, {
+    title: "New partnership invite",
+    body: `${displayName} wants to connect with you.`,
+    icon: "/icon-192.png",
+    url: "/partners",
+  }).catch(() => {});
 
   return NextResponse.json(partnership, { status: 201 });
 }

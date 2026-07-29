@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendPushToUser } from "@/lib/push";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -55,6 +56,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         link: `/clients/${client.id}`,
       },
     });
+    sendPushToUser(partnership.inviterId, {
+      title: "Partnership accepted!",
+      body: `${myName} is now your partner.`,
+      icon: "/icon-192.png",
+      url: `/clients/${client.id}`,
+    }).catch(() => {});
   } else {
     await prisma.notification.create({
       data: {
@@ -65,6 +72,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         link: "/partners",
       },
     });
+    sendPushToUser(partnership.inviterId, {
+      title: "Partnership declined",
+      body: `${myName} declined your invite.`,
+      icon: "/icon-192.png",
+      url: "/partners",
+    }).catch(() => {});
   }
 
   return NextResponse.json(updated);
