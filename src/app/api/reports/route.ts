@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getClientMonthlyReport } from "@/lib/analytics";
 import { formatMonthYear } from "@/lib/utils";
 import { z } from "zod";
+import { sendPushToUser } from "@/lib/push";
 
 const generateSchema = z.object({
   clientId: z.string(),
@@ -72,6 +73,20 @@ export async function POST(req: Request) {
       updatedAt: new Date(),
     },
   });
+
+  // Notify the client if they have a portal account
+  const portal = await prisma.clientPortal.findUnique({
+    where: { clientId },
+    select: { userId: true },
+  });
+  if (portal) {
+    sendPushToUser(portal.userId, {
+      title: "New report available",
+      body: `Your ${formatMonthYear(month, year)} report from ${client.name} is ready.`,
+      icon: "/icon-192.png",
+      url: "/portal/reports",
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ data: { report, reportData } }, { status: 201 });
 }

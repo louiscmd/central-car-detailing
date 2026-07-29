@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { scrapeAndSave } from "@/scrapers";
+import { sendPushToUser } from "@/lib/push";
 
 export const maxDuration = 60;
 
@@ -56,6 +57,16 @@ export async function POST(req: Request) {
           ? r.value.error
           : undefined,
     }));
+
+    const succeeded = summary.filter(s => s.success).length;
+    const failed = summary.filter(s => !s.success).length;
+
+    sendPushToUser(session.user.id, {
+      title: `Analytics updated — ${client.name}`,
+      body: `${succeeded} platform${succeeded !== 1 ? "s" : ""} scraped successfully${failed ? `, ${failed} failed` : ""}.`,
+      icon: "/icon-192.png",
+      url: `/clients/${clientId}`,
+    }).catch(() => {});
 
     return NextResponse.json({ data: summary });
   }

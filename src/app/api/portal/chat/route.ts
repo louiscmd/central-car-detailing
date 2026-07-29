@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendPushToUser } from "@/lib/push";
 
 async function getClientId(userId: string, role: string, sessionClientId: string | undefined, explicitClientId?: string | null): Promise<string | null> {
   if (role === "CLIENT") return sessionClientId ?? null;
@@ -95,6 +96,45 @@ export async function POST(req: Request) {
       attachments: true,
     },
   });
+
+  // Push notification to the other party
+  const senderName = message.sender.name ?? "Someone";
+  const preview = message.content
+    ? message.content.slice(0, 60)
+    : message.attachments[0]?.type === "AUDIO" ? "🎤 Voice note"
+    : message.attachments[0]?.type === "IMAGE" ? "📷 Image"
+    : message.attachments[0]?.type === "VIDEO" ? "🎥 Video"
+    : "📎 File";
+
+  if (role === "CLIENT") {
+    // Client sent — notify the manager
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      select: { userId: true, name: true },
+    });
+    if (client) {
+      sendPushToUser(client.userId, {
+        title: `New message from ${client.name}`,
+        body: preview,
+        icon: "/icon-192.png",
+        url: `/clients/${clientId}/chat`,
+      }).catch(() => {});
+    }
+  } else {
+    // Manager sent — notify the client
+    const portal = await prisma.clientPortal.findUnique({
+      where: { clientId },
+      select: { userId: true },
+    });
+    if (portal) {
+      sendPushToUser(portal.userId, {
+        title: `New message from ${senderName}`,
+        body: preview,
+        icon: "/icon-192.png",
+        url: "/portal/chat",
+      }).catch(() => {});
+    }
+  }
 
   return NextResponse.json(message, { status: 201 });
 }
