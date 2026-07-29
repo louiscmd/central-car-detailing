@@ -1,11 +1,13 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
 
-webpush.setVapidDetails(
-  process.env.VAPID_MAILTO!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-);
+function initVapid() {
+  const mailto = process.env.VAPID_MAILTO;
+  const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const priv = process.env.VAPID_PRIVATE_KEY;
+  if (!mailto || !pub || !priv) throw new Error("VAPID env vars not set");
+  webpush.setVapidDetails(mailto, pub, priv);
+}
 
 export interface PushPayload {
   title: string;
@@ -15,6 +17,7 @@ export interface PushPayload {
 }
 
 export async function sendPushToUser(userId: string, payload: PushPayload) {
+  initVapid();
   const subs = await prisma.pushSubscription.findMany({ where: { userId } });
   const results = await Promise.allSettled(
     subs.map(sub =>
