@@ -31,11 +31,29 @@ export function PushToggle() {
         body: JSON.stringify({ title: "test", body: "This is a test notification from SocialPulse." }),
       });
       const data = await res.json();
-      if (!res.ok) toast({ title: "Error", description: data.error, variant: "destructive" });
-      else toast({ title: "Test notification sent!", description: "Check your device." });
+      if (!res.ok) {
+        const detail = data.hint ?? data.errors?.[0]?.body ?? data.errors?.[0]?.message ?? data.error;
+        toast({ title: "Push failed", description: detail, variant: "destructive" });
+        console.error("Push test error:", data);
+      } else if (data.failed > 0) {
+        toast({ title: `Sent ${data.sent}, failed ${data.failed}`, description: JSON.stringify(data.errors), variant: "destructive" });
+        console.error("Push errors:", data.errors);
+      } else {
+        toast({ title: "Test notification sent!", description: "Check your device — it should arrive within seconds." });
+      }
     } finally {
       setTesting(false);
     }
+  }
+
+  async function checkStatus() {
+    const res = await fetch("/api/push/test");
+    const data = await res.json();
+    console.log("Push status:", data);
+    toast({
+      title: `${data.subscriptionCount} subscription(s) on file`,
+      description: `VAPID: pub=${data.vapidPublicKeySet} priv=${data.vapidPrivateKeySet} mailto=${data.vapidMailtoSet}`,
+    });
   }
 
   if (state === "unsupported") {
@@ -87,15 +105,20 @@ export function PushToggle() {
       </div>
 
       {state === "subscribed" && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={sendTest}
-          disabled={testing}
-        >
-          {testing ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <BellRing className="w-3 h-3 mr-2" />}
-          Send test notification
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={sendTest}
+            disabled={testing}
+          >
+            {testing ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <BellRing className="w-3 h-3 mr-2" />}
+            Send test notification
+          </Button>
+          <Button variant="ghost" size="sm" onClick={checkStatus} className="text-xs text-muted-foreground">
+            Check status
+          </Button>
+        </div>
       )}
     </div>
   );
