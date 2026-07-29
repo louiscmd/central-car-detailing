@@ -22,6 +22,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -64,6 +65,8 @@ const navSections = [
 
 export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = (session?.user as { role?: string })?.role;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -139,7 +142,10 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
                   </p>
                 )}
                 <div className="space-y-0.5">
-                  {section.items.map((item) => {
+                  {section.items.filter((item) => {
+                    if (item.href === "/admin") return role === "ADMIN";
+                    return true;
+                  }).map((item) => {
                     const isActive =
                       pathname === item.href ||
                       (item.href !== "/dashboard" && pathname.startsWith(item.href));
