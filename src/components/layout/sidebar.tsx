@@ -131,12 +131,7 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
         {/* Nav */}
         <ScrollArea className="flex-1 py-3">
           <nav className="px-3 space-y-4">
-            {navSections.map((section, si) => {
-              const items = section.label === "Admin"
-                ? section.items.filter(i => i.href !== "/admin" || isAdmin)
-                : section.items;
-              if (items.length === 0) return null;
-              return (
+            {navSections.map((section, si) => (
               <div key={si}>
                 {section.label && (
                   <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
@@ -144,7 +139,7 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
                   </p>
                 )}
                 <div className="space-y-0.5">
-                  {items.map((item) => {
+                  {section.items.map((item) => {
                     const isActive =
                       pathname === item.href ||
                       (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -167,8 +162,7 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
                   })}
                 </div>
               </div>
-              );
-            })}
+            ))}
           </nav>
         </ScrollArea>
 
