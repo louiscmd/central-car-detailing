@@ -22,7 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <NextAuthSessionProvider>
       <div className="flex h-screen overflow-hidden bg-background">
-        <Sidebar />
+        <Sidebar isAdmin={role === "ADMIN"} />
         <div className="flex-1 flex flex-col md:ml-64 overflow-hidden">
           <Header
             clients={clients}

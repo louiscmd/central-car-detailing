@@ -62,7 +62,7 @@ const navSections = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -131,7 +131,12 @@ export function Sidebar() {
         {/* Nav */}
         <ScrollArea className="flex-1 py-3">
           <nav className="px-3 space-y-4">
-            {navSections.map((section, si) => (
+            {navSections.map((section, si) => {
+              const items = section.label === "Admin"
+                ? section.items.filter(i => i.href !== "/admin" || isAdmin)
+                : section.items;
+              if (items.length === 0) return null;
+              return (
               <div key={si}>
                 {section.label && (
                   <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
@@ -139,7 +144,7 @@ export function Sidebar() {
                   </p>
                 )}
                 <div className="space-y-0.5">
-                  {section.items.map((item) => {
+                  {items.map((item) => {
                     const isActive =
                       pathname === item.href ||
                       (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -162,7 +167,8 @@ export function Sidebar() {
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </nav>
         </ScrollArea>
 
