@@ -19,6 +19,7 @@ import {
   Home,
   MessageSquare,
   UserPlus,
+  ShieldCheck,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -55,6 +56,7 @@ const navSections = [
   {
     label: "Admin",
     items: [
+      { href: "/admin", label: "Admin panel", icon: ShieldCheck },
       { href: "/settings", label: "Settings", icon: Settings },
     ],
   },

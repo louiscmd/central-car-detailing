@@ -31,13 +31,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { id: true, username: true, bio: true, avatarUrl: true, role: true },
+          select: { id: true, username: true, bio: true, avatarUrl: true, role: true, lastActiveAt: true },
         });
         if (!dbUser) return null; // invalidates session
         token.username = dbUser.username;
         token.bio = dbUser.bio;
         token.avatarUrl = dbUser.avatarUrl;
-        token.role = dbUser.role; // keep role in sync
+        token.role = dbUser.role;
+        // Throttle lastActiveAt writes to once per 5 minutes
+        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+        if (!dbUser.lastActiveAt || dbUser.lastActiveAt < fiveMinAgo) {
+          await prisma.user.update({
+            where: { id: token.id as string },
+            data: { lastActiveAt: new Date() },
+          });
+        }
       }
       return token;
     },

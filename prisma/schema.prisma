@@ -70,6 +70,7 @@ model User {
   receivedPartnerships  Partnership[] @relation("PartnershipInvitee")
   notifications         Notification[]
   pushSubscriptions     PushSubscription[]
+  lastActiveAt     DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
