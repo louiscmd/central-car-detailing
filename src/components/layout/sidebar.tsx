@@ -30,19 +30,34 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const navItems = [
-  { href: "/welcome", label: "Biz Hub", icon: Home },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/clients", label: "Clients", icon: Users },
-  { href: "/partners", label: "Partners", icon: UserPlus },
-  { href: "/chat", label: "Chat", icon: MessageSquare },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/deals", label: "Deal Tracker", icon: Kanban },
-  { href: "/tasks", label: "Daily Checklist", icon: CheckSquare },
-  { href: "/revenue-estimator", label: "Revenue Estimator", icon: TrendingUp },
-  { href: "/territory", label: "Territory Tracker", icon: MapPin },
-  { href: "/settings", label: "Settings", icon: Settings },
+const navSections = [
+  {
+    label: null,
+    items: [
+      { href: "/welcome", label: "Biz Hub", icon: Home },
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/clients", label: "Clients", icon: Users },
+      { href: "/partners", label: "Partners", icon: UserPlus },
+      { href: "/chat", label: "Chat", icon: MessageSquare },
+      { href: "/tasks", label: "Daily Checklist", icon: CheckSquare },
+    ],
+  },
+  {
+    label: "Toolbox",
+    items: [
+      { href: "/analytics", label: "Analytics", icon: BarChart3 },
+      { href: "/reports", label: "Reports", icon: FileText },
+      { href: "/deals", label: "Deal Tracker", icon: Kanban },
+      { href: "/revenue-estimator", label: "Revenue Estimator", icon: TrendingUp },
+      { href: "/territory", label: "Territory Tracker", icon: MapPin },
+    ],
+  },
+  {
+    label: "Admin",
+    items: [
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -112,29 +127,40 @@ export function Sidebar() {
         </div>
 
         {/* Nav */}
-        <ScrollArea className="flex-1 py-4">
-          <nav className="px-3 space-y-1">
-            {navItems.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/dashboard" && pathname.startsWith(item.href));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary/15 text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  )}
-                >
-                  <item.icon className="w-4 h-4 shrink-0" />
-                  {item.label}
-                </Link>
-              );
-            })}
+        <ScrollArea className="flex-1 py-3">
+          <nav className="px-3 space-y-4">
+            {navSections.map((section, si) => (
+              <div key={si}>
+                {section.label && (
+                  <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+                    {section.label}
+                  </p>
+                )}
+                <div className="space-y-0.5">
+                  {section.items.map((item) => {
+                    const isActive =
+                      pathname === item.href ||
+                      (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                          isActive
+                            ? "bg-primary/15 text-primary"
+                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        )}
+                      >
+                        <item.icon className="w-4 h-4 shrink-0" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </ScrollArea>
 
