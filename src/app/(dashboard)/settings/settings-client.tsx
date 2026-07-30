@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { Loader2, RefreshCw, CheckCircle2, AlertCircle, AtSign } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, AlertCircle, AtSign, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +41,8 @@ export default function SettingsClient({ isAdmin, portalClients }: { isAdmin: bo
 
   const [profileForm, setProfileForm] = useState({ username: "", name: "", bio: "" });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const u = session?.user as { username?: string; bio?: string } | undefined;
@@ -127,6 +129,21 @@ export default function SettingsClient({ isAdmin, portalClients }: { isAdmin: bo
       await update();
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/settings/delete-account", { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+        return;
+      }
+      window.location.href = "/login";
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -422,6 +439,37 @@ export default function SettingsClient({ isAdmin, portalClients }: { isAdmin: bo
             <p>Version: 0.1.0</p>
             <p>Tracks publicly visible social media analytics using surface-level data only.</p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2 text-destructive">
+            <Trash2 className="w-4 h-4" />
+            Delete Account
+          </CardTitle>
+          <CardDescription>
+            Permanently delete your account and all associated data. This cannot be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Type <span className="font-mono font-semibold">DELETE</span> to confirm</Label>
+            <Input
+              placeholder="DELETE"
+              value={deleteConfirm}
+              onChange={e => setDeleteConfirm(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="destructive"
+            disabled={deleteConfirm !== "DELETE" || deleting}
+            onClick={handleDeleteAccount}
+          >
+            {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Permanently Delete Account
+          </Button>
         </CardContent>
       </Card>
     </div>
