@@ -28,7 +28,7 @@ export function Header() {
     .slice(0, 2) ?? "U";
 
   return (
-    <header className="h-14 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-30 flex items-center px-4 md:px-6">
+    <header className="h-14 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-30 flex items-center pl-14 pr-4 md:px-6">
       <div className="flex-1" />
 
       {/* Right */}
