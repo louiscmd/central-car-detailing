@@ -15,48 +15,53 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
+        // Fresh login — load everything from DB once
         token.id = user.id;
         token.role = (user as { role?: string }).role;
-        if ((user as { role?: string }).role === "CLIENT") {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id as string },
+          select: { username: true, name: true, avatarUrl: true, role: true },
+        });
+        token.username = dbUser?.username;
+        token.name = dbUser?.name ?? user.name;
+        token.avatarUrl = dbUser?.avatarUrl;
+        token.role = dbUser?.role ?? (user as { role?: string }).role;
+        if (token.role === "CLIENT") {
           const portal = await prisma.clientPortal.findUnique({
             where: { userId: user.id as string },
             select: { clientId: true },
           });
           token.clientId = portal?.clientId;
         }
+        return token;
       }
-      // Refresh username/bio from DB on every token cycle or explicit update
+
+      // Explicit update() call from client — merge provided fields into token
+      if (trigger === "update" && session) {
+        return { ...token, ...session };
+      }
+
+      // Periodic refresh — verify user still exists, no extra field queries
       if (token.id) {
-        const dbUser = await prisma.user.findUnique({
+        const exists = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { id: true, username: true, bio: true, avatarUrl: true, role: true, lastActiveAt: true },
+          select: { id: true },
         });
-        if (!dbUser) return null; // invalidates session
-        token.username = dbUser.username;
-        token.bio = dbUser.bio;
-        token.avatarUrl = dbUser.avatarUrl;
-        token.role = dbUser.role;
-        // Throttle lastActiveAt writes to once per 5 minutes
-        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
-        if (!dbUser.lastActiveAt || dbUser.lastActiveAt < fiveMinAgo) {
-          await prisma.user.update({
-            where: { id: token.id as string },
-            data: { lastActiveAt: new Date() },
-          });
-        }
+        if (!exists) return null;
       }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        (session.user as { role?: string; clientId?: string; username?: string; bio?: string; avatarUrl?: string }).role = token.role as string;
-        (session.user as { role?: string; clientId?: string; username?: string; bio?: string; avatarUrl?: string }).clientId = token.clientId as string | undefined;
-        (session.user as { role?: string; clientId?: string; username?: string; bio?: string; avatarUrl?: string }).username = token.username as string | undefined;
-        (session.user as { role?: string; clientId?: string; username?: string; bio?: string; avatarUrl?: string }).bio = token.bio as string | undefined;
-        (session.user as { role?: string; clientId?: string; username?: string; bio?: string; avatarUrl?: string }).avatarUrl = token.avatarUrl as string | undefined;
+        session.user.name = token.name as string;
+        (session.user as { role?: string; clientId?: string; username?: string; avatarUrl?: string }).role = token.role as string;
+        (session.user as { role?: string; clientId?: string; username?: string; avatarUrl?: string }).clientId = token.clientId as string | undefined;
+        (session.user as { role?: string; clientId?: string; username?: string; avatarUrl?: string }).username = token.username as string | undefined;
+        (session.user as { role?: string; clientId?: string; username?: string; avatarUrl?: string }).avatarUrl = token.avatarUrl as string | undefined;
       }
       return session;
     },

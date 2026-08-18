@@ -2,19 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, MessageSquare, FileText, Menu, X } from "lucide-react";
+import { LayoutDashboard, MessageSquare, FileText, BarChart3, Menu, X, Settings, Users } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/portal", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/portal/chat", label: "Chat", icon: MessageSquare },
-  { href: "/portal/reports", label: "Reports", icon: FileText },
-];
-
-export function PortalSidebar({ clientName, isManager }: { clientName: string; isManager: boolean }) {
+export function PortalSidebar({ clientName, hasAnalytics }: { clientName: string; hasAnalytics: boolean }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navItems = [
+    { href: "/portal", label: "Overview", icon: LayoutDashboard, exact: true },
+    { href: "/portal/chat", label: "Chat", icon: MessageSquare },
+    { href: "/portal/reports", label: "Reports", icon: FileText },
+    ...(hasAnalytics ? [{ href: "/portal/analytics", label: "Analytics", icon: BarChart3 }] : []),
+    { href: "/portal/partners", label: "Partners", icon: Users },
+    { href: "/portal/settings", label: "Settings", icon: Settings },
+  ];
 
   return (
     <>
@@ -41,7 +44,6 @@ export function PortalSidebar({ clientName, isManager }: { clientName: string; i
             {clientName.slice(0, 2).toUpperCase()}
           </div>
           <p className="font-semibold text-sm truncate">{clientName}</p>
-          {isManager && <p className="text-[10px] text-amber-500 mt-0.5">Preview mode</p>}
         </div>
 
         {/* Nav */}

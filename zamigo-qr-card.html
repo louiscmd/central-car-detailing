@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Zamigo QR</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #e8e3dd;
+    display: grid;
+    place-items: center;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .badge {
+    position: relative;
+    width: 380px;
+    height: 380px;
+  }
+
+  .badge svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 2;
+  }
+
+  .qr-box {
+    background: #fff;
+    padding: 8px;
+    border-radius: 4px;
+  }
+
+  #qrcode canvas, #qrcode img {
+    display: block;
+    width: 185px !important;
+    height: 185px !important;
+  }
+
+  .label {
+    font-family: sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #fff;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="badge">
+  <svg viewBox="0 0 380 380" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- Outer circle: deep green -->
+    <circle cx="190" cy="190" r="188" fill="#2a5c3f"/>
+
+    <!-- Bold red arc — top half -->
+    <path d="M 4 190 A 186 186 0 0 1 376 190" fill="#c0392b"/>
+
+    <!-- White center circle for QR -->
+    <circle cx="190" cy="190" r="144" fill="#fff"/>
+
+    <!-- Thin white separator line across the green/red split -->
+    <line x1="4" y1="190" x2="376" y2="190" stroke="#fff" stroke-width="3"/>
+
+
+  </svg>
+
+  <div class="center">
+    <div class="qr-box">
+      <div id="qrcode"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  new QRCode(document.getElementById('qrcode'), {
+    text: 'https://www.instagram.com/zamigo_wilanow/',
+    width: 185,
+    height: 185,
+    colorDark: '#1a1a1a',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+</script>
+
+</body>
+</html>

@@ -13,20 +13,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PerspectiveSwitcher } from "@/components/layout/perspective-switcher";
 import { NotificationBell } from "@/components/layout/notification-bell";
 
-interface ClientItem { id: string; name: string; }
-
-interface HeaderProps {
-  title?: string;
-  clients?: ClientItem[];
-  viewAsClientId?: string | null;
-  currentClientName?: string;
-  isOwner?: boolean;
-}
-
-export function Header({ title, clients = [], viewAsClientId = null, currentClientName, isOwner = false }: HeaderProps) {
+export function Header() {
   const { data: session } = useSession();
   const role = (session?.user as { role?: string })?.role;
   const isManager = role === "USER" || role === "ADMIN";
@@ -40,22 +29,7 @@ export function Header({ title, clients = [], viewAsClientId = null, currentClie
 
   return (
     <header className="h-14 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-30 flex items-center px-4 md:px-6">
-      {/* Left */}
-      <div className="flex-1">
-        {title && <h1 className="text-base font-semibold hidden md:block">{title}</h1>}
-      </div>
-
-      {/* Center — perspective switcher (owner only, floats above header) */}
-      {isOwner && (
-        <div className="absolute left-1/2 -translate-x-1/2">
-          <PerspectiveSwitcher
-            clients={clients}
-            viewAsClientId={viewAsClientId}
-            currentClientName={currentClientName}
-            isManager={isManager}
-          />
-        </div>
-      )}
+      <div className="flex-1" />
 
       {/* Right */}
       <div className="flex items-center gap-2 flex-1 justify-end">
@@ -89,13 +63,13 @@ export function Header({ title, clients = [], viewAsClientId = null, currentClie
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <a href="/partners" className="cursor-pointer">
+              <a href={isManager ? "/partners" : "/portal/partners"} className="cursor-pointer">
                 <Users className="mr-2 h-4 w-4" />
                 Partners
               </a>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <a href="/settings" className="cursor-pointer">
+              <a href={isManager ? "/settings" : "/portal/settings"} className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 Settings
               </a>

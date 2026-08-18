@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { Loader2, RefreshCw, CheckCircle2, AlertCircle, AtSign, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -72,7 +72,10 @@ export default function SettingsClient({ isAdmin, portalClients }: { isAdmin: bo
         return;
       }
       toast({ title: "Profile updated!" });
-      await update();
+      const patch: Record<string, string> = {};
+      if (profileForm.username) patch.username = profileForm.username;
+      if (profileForm.name) patch.name = profileForm.name;
+      await update(patch);
     } finally {
       setSavingProfile(false);
     }
@@ -137,11 +140,12 @@ export default function SettingsClient({ isAdmin, portalClients }: { isAdmin: bo
     try {
       const res = await fetch("/api/settings/delete-account", { method: "DELETE" });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json() as { error?: string };
         toast({ title: "Error", description: data.error, variant: "destructive" });
         return;
       }
-      window.location.href = "/login";
+      // Clear the session cookie then redirect
+      await signOut({ callbackUrl: "/login" });
     } finally {
       setDeleting(false);
     }

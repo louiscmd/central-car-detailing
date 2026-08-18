@@ -51,6 +51,7 @@ model User {
   username      String?   @unique
   bio           String?   @db.Text
   avatarUrl     String?
+  isDummy       Boolean   @default(false)
   clients           Client[]
   sessions          Session[]
   accounts          Account[]
@@ -127,25 +128,38 @@ model Client {
 }
 
 model SocialAccount {
-  id          String          @id @default(cuid())
-  platform    Platform
-  username    String
-  profileUrl  String
-  displayName String?
-  avatarUrl   String?
-  clientId    String
-  client      Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  snapshots   DailySnapshot[]
-  posts       Post[]
-  accessToken String?         @db.Text
-  tokenExpiry DateTime?
-  isPaused    Boolean         @default(false)
-  lastScraped DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id                   String                 @id @default(cuid())
+  platform             Platform
+  username             String
+  profileUrl           String
+  displayName          String?
+  avatarUrl            String?
+  clientId             String
+  client               Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  snapshots            DailySnapshot[]
+  posts                Post[]
+  analyticsPermissions AnalyticsPermission[]
+  accessToken          String?                @db.Text
+  tokenExpiry          DateTime?
+  isPaused             Boolean                @default(false)
+  lastScraped          DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
 
   @@unique([clientId, platform])
   @@map("social_accounts")
+}
+
+model AnalyticsPermission {
+  id        String       @id @default(cuid())
+  portalId  String
+  portal    ClientPortal @relation(fields: [portalId], references: [id], onDelete: Cascade)
+  accountId String
+  account   SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  grantedAt DateTime     @default(now())
+
+  @@unique([portalId, accountId])
+  @@map("analytics_permissions")
 }
 
 model DailySnapshot {
@@ -399,46 +413,54 @@ model Task {
 }
 
 model ClientPortal {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  clientId  String   @unique
-  invitedAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id                   String                 @id @default(cuid())
+  userId               String                 @unique
+  clientId             String                 @unique
+  invitedAt            DateTime               @default(now())
+  user                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client               Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  analyticsPermissions AnalyticsPermission[]
 
   @@map("client_portals")
 }
 
 model Channel {
-  id          String        @id @default(cuid())
-  clientId    String
-  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  name        String
-  createdById String
-  createdBy   User          @relation("ChannelCreator", fields: [createdById], references: [id])
-  messages    ChatMessage[]
-  createdAt   DateTime      @default(now())
+  id              String        @id @default(cuid())
+  clientId        String?
+  client          Client?       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  conversationKey String?
+  name            String
+  createdById     String
+  createdBy       User          @relation("ChannelCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  messages        ChatMessage[]
+  createdAt       DateTime      @default(now())
 
-  @@unique([clientId, name])
   @@index([clientId])
+  @@index([conversationKey])
   @@map("channels")
 }
 
 model ChatMessage {
-  id          String       @id @default(cuid())
-  channelId   String?
-  channel     Channel?     @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  clientId    String
-  client      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  senderId    String
-  sender      User         @relation("MessageSender", fields: [senderId], references: [id])
-  content     String?      @db.Text
-  attachments Attachment[]
-  read        Boolean      @default(false)
-  createdAt   DateTime     @default(now())
+  id              String       @id @default(cuid())
+  channelId       String?
+  channel         Channel?     @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  clientId        String?
+  client          Client?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  conversationKey String?
+  senderId        String
+  sender          User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  content         String?      @db.Text
+  attachments     Attachment[]
+  read            Boolean      @default(false)
+  editedAt        DateTime?
+  replyToId       String?
+  replyTo         ChatMessage? @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies         ChatMessage[] @relation("MessageReplies")
+  createdAt       DateTime     @default(now())
 
   @@index([channelId, createdAt])
   @@index([clientId, createdAt])
+  @@index([conversationKey, createdAt])
   @@map("chat_messages")
 }
 

@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { FileText, MessageSquare, TrendingUp } from "lucide-react";
@@ -10,15 +9,8 @@ export default async function PortalOverviewPage() {
   if (!session?.user?.id) redirect("/login");
 
   const role = (session.user as { role?: string; clientId?: string })?.role;
-  let clientId: string | null = null;
-
-  if (role === "CLIENT") {
-    clientId = (session.user as { clientId?: string })?.clientId ?? null;
-  } else {
-    const jar = await cookies();
-    clientId = jar.get("view-as-client")?.value ?? null;
-  }
-
+  if (role !== "CLIENT") redirect("/dashboard");
+  const clientId = (session.user as { clientId?: string })?.clientId;
   if (!clientId) redirect("/dashboard");
 
   const [client, recentReports, unreadCount, lastMessage] = await Promise.all([

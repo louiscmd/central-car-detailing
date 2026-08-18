@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Submariner — Rolex</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#000;
+  --near-black:#040404;
+  --white:#EEE9E0;
+  --dim:rgba(238,233,224,0.38);
+  --steel:#C4C4C8;
+  --green:#005030;
+  --green-dim:rgba(0,80,48,0.7);
+  --rule:rgba(238,233,224,0.12);
+}
+html{scroll-behavior:auto;overflow-x:hidden}
+body{
+  background:var(--black);
+  color:var(--white);
+  font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;
+  font-weight:300;
+  overflow-x:hidden;
+  cursor:none;
+}
+/* --- CURSOR --- */
+#cursor{
+  position:fixed;width:6px;height:6px;background:var(--white);border-radius:50%;
+  pointer-events:none;z-index:9999;transform:translate(-50%,-50%);
+  transition:width .15s,height .15s;mix-blend-mode:difference;
+}
+#cursor-ring{
+  position:fixed;width:36px;height:36px;border:1px solid rgba(238,233,224,.3);
+  border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);
+}
+/* --- LOADING --- */
+#loading{
+  position:fixed;inset:0;background:#000;z-index:8000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.8rem;
+}
+#loading-logo{font-size:.6rem;letter-spacing:.55em;text-transform:uppercase;color:var(--white)}
+#loading-bar-wrap{width:180px;height:1px;background:rgba(255,255,255,.08)}
+#loading-bar{height:100%;width:0;background:var(--white);transition:width .08s linear}
+#loading-status{font-size:.42rem;letter-spacing:.5em;text-transform:uppercase;color:var(--dim)}
+/* --- NAV --- */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:2rem 3.5rem;mix-blend-mode:difference;
+}
+.nav-brand{font-family:Georgia,'Times New Roman',serif;font-size:.85rem;letter-spacing:.4em;text-transform:uppercase;opacity:0}
+.nav-items{display:flex;gap:2.5rem;list-style:none}
+.nav-items a{font-size:.48rem;letter-spacing:.45em;text-transform:uppercase;text-decoration:none;color:var(--white);opacity:0;transition:opacity .3s}
+.nav-items a:hover{opacity:.6}
+/* --- HERO --- */
+#hero{height:100vh;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#hero-canvas{position:absolute;inset:0;width:100%;height:100%}
+.hero-inner{position:relative;z-index:1;text-align:center;pointer-events:none}
+.hero-eyebrow{
+  font-size:.48rem;letter-spacing:.65em;text-transform:uppercase;color:var(--dim);
+  margin-bottom:2rem;opacity:0;
+}
+.hero-title{
+  font-family:Georgia,'Times New Roman',serif;
+  font-size:clamp(3.2rem,9vw,7.5rem);font-weight:400;
+  letter-spacing:.22em;text-transform:uppercase;line-height:1;
+}
+.hero-word{display:block;overflow:hidden}
+.hero-word span{display:block;transform:translateY(110%)}
+.hero-sub{
+  margin-top:2.2rem;font-size:.5rem;letter-spacing:.5em;text-transform:uppercase;
+  color:var(--dim);opacity:0;
+}
+.hero-line{
+  position:absolute;bottom:3rem;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:.9rem;opacity:0;
+}
+.hero-line span{font-size:.42rem;letter-spacing:.55em;text-transform:uppercase;color:var(--dim)}
+.scroll-bar{width:1px;height:55px;background:linear-gradient(to bottom,rgba(238,233,224,.7),transparent);animation:sbar 2.2s ease-in-out infinite}
+@keyframes sbar{
+  0%{transform:scaleY(0);transform-origin:top}
+  50%{transform:scaleY(1);transform-origin:top}
+  51%{transform:scaleY(1);transform-origin:bottom}
+  100%{transform:scaleY(0);transform-origin:bottom}
+}
+/* --- MOVEMENT SECTION --- */
+#movement-wrap{height:700vh}
+.sticky-frame{position:sticky;top:0;height:100vh;overflow:hidden}
+#movement-canvas{position:absolute;inset:0;width:100%;height:100%}
+.mov-caption{
+  position:absolute;bottom:7vh;left:50%;transform:translateX(-50%);
+  text-align:center;pointer-events:none;width:600px;max-width:90vw;
+}
+.mov-label{font-size:.42rem;letter-spacing:.6em;text-transform:uppercase;color:var(--dim);margin-bottom:.5rem}
+.mov-title{font-family:Georgia,'Times New Roman',serif;font-size:clamp(1rem,2.8vw,1.7rem);font-weight:400;letter-spacing:.12em}
+.mov-spec{font-size:.48rem;letter-spacing:.3em;color:var(--dim);margin-top:.6rem;font-variant-numeric:tabular-nums}
+
+/* --- INTERLUDE TEXT --- */
+.interlude{
+  position:relative;padding:14vh 0 12vh;text-align:center;
+  border-top:1px solid var(--rule);
+}
+.interlude-num{font-size:.42rem;letter-spacing:.6em;color:var(--dim);display:block;margin-bottom:1.2rem}
+.interlude-heading{
+  font-family:Georgia,'Times New Roman',serif;
+  font-size:clamp(1.6rem,4vw,3.2rem);font-weight:400;
+  letter-spacing:.14em;text-transform:uppercase;max-width:700px;margin:0 auto;
+  text-wrap:balance;
+}
+.interlude-body{
+  max-width:520px;margin:2.5rem auto 0;font-size:.75rem;line-height:2;
+  letter-spacing:.06em;color:rgba(238,233,224,.72);
+}
+
+/* --- DIAL SECTION --- */
+#dial-wrap{height:500vh}
+#dial-canvas{position:absolute;inset:0;width:100%;height:100%}
+
+/* --- REVEAL SECTION --- */
+#reveal-wrap{height:500vh}
+#reveal-canvas{position:absolute;inset:0;width:100%;height:100%}
+.reveal-hud{
+  position:absolute;bottom:7vh;width:100%;text-align:center;pointer-events:none;
+}
+.reveal-hud-label{font-size:.42rem;letter-spacing:.6em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:.5rem}
+.reveal-hud-name{
+  font-family:Georgia,'Times New Roman',serif;
+  font-size:clamp(1.1rem,2.5vw,1.8rem);letter-spacing:.25em;text-transform:uppercase;
+}
+.reveal-hud-ref{font-size:.45rem;letter-spacing:.45em;color:var(--dim);margin-top:.5rem;display:block}
+
+/* --- SPEC STRIP --- */
+.spec-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+  margin:0;
+}
+.spec-cell{
+  padding:4rem 3rem;border-right:1px solid var(--rule);
+}
+.spec-cell:last-child{border-right:none}
+.spec-name{font-size:.42rem;letter-spacing:.5em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:.8rem}
+.spec-val{font-family:Georgia,'Times New Roman',serif;font-size:1.6rem;letter-spacing:.05em;display:block;margin-bottom:.3rem}
+.spec-unit{font-size:.48rem;letter-spacing:.35em;color:var(--dim);text-transform:uppercase}
+
+/* --- CONFIGURATOR --- */
+#configurator{
+  padding:10rem 0 10rem;background:var(--black);
+}
+.config-inner{
+  max-width:1440px;margin:0 auto;padding:0 4rem;
+  display:grid;grid-template-columns:1fr 1fr;gap:8rem;align-items:center;
+}
+#config-three-wrap{
+  position:relative;aspect-ratio:1;
+  background:radial-gradient(ellipse at 40% 45%,rgba(255,255,255,.03) 0%,transparent 70%);
+}
+#config-canvas{width:100%;height:100%}
+.config-right{display:flex;flex-direction:column;gap:3.5rem}
+.config-super{font-size:.42rem;letter-spacing:.65em;text-transform:uppercase;color:var(--green);margin-bottom:.5rem;display:block}
+.config-heading{
+  font-family:Georgia,'Times New Roman',serif;
+  font-size:clamp(2rem,3.5vw,3rem);font-weight:400;letter-spacing:.1em;text-transform:uppercase;
+}
+.ctrl-label{font-size:.42rem;letter-spacing:.55em;text-transform:uppercase;color:var(--dim);margin-bottom:1rem;display:block}
+.ctrl-buttons{display:flex;flex-wrap:wrap;gap:.6rem}
+.ctrl-btn{
+  padding:.55rem 1.1rem;border:1px solid rgba(238,233,224,.2);background:transparent;
+  color:var(--white);font-size:.45rem;letter-spacing:.3em;text-transform:uppercase;
+  cursor:none;transition:border-color .25s,background .25s;
+}
+.ctrl-btn:hover,.ctrl-btn.active{border-color:var(--white);background:rgba(238,233,224,.06)}
+.dial-swatches{display:flex;gap:.75rem}
+.dial-sw{
+  width:32px;height:32px;border-radius:50%;cursor:none;
+  border:2px solid transparent;transition:border-color .25s;
+}
+.dial-sw:hover,.dial-sw.active{border-color:var(--white)}
+.config-specs{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem 2.5rem}
+.cs-item .cs-k{font-size:.4rem;letter-spacing:.45em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:.3rem}
+.cs-item .cs-v{font-size:.65rem;letter-spacing:.1em;font-variant-numeric:tabular-nums}
+.view-btns{display:flex;gap:.8rem}
+.view-btn{
+  padding:.65rem 1.4rem;border:1px solid rgba(238,233,224,.2);background:transparent;
+  color:var(--white);font-size:.45rem;letter-spacing:.3em;text-transform:uppercase;cursor:none;
+  transition:border-color .25s,background .25s;
+}
+.view-btn:hover,.view-btn.active{border-color:var(--white);background:rgba(238,233,224,.06)}
+
+/* --- CASEBACK WINDOW --- */
+.caseback-panel{
+  max-width:1440px;margin:0 auto;padding:6rem 4rem;
+  display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:center;
+  border-top:1px solid var(--rule);
+}
+.cb-text{}
+.cb-eyebrow{font-size:.42rem;letter-spacing:.6em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:1rem}
+.cb-title{font-family:Georgia,'Times New Roman',serif;font-size:clamp(1.5rem,3vw,2.5rem);font-weight:400;letter-spacing:.12em;text-transform:uppercase;margin-bottom:1.8rem;text-wrap:balance}
+.cb-body{font-size:.72rem;line-height:2;color:rgba(238,233,224,.7);letter-spacing:.06em}
+.cb-canvas-wrap{aspect-ratio:1;position:relative}
+#caseback-canvas{width:100%;height:100%}
+
+/* --- CTA --- */
+#cta{
+  height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;position:relative;overflow:hidden;
+  border-top:1px solid var(--rule);
+}
+#cta-canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.6}
+.cta-inner{position:relative;z-index:1}
+.cta-eyebrow{font-size:.42rem;letter-spacing:.7em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:2.5rem;opacity:0}
+.cta-headline{
+  font-family:Georgia,'Times New Roman',serif;
+  font-size:clamp(2.5rem,7vw,6rem);font-weight:400;letter-spacing:.14em;
+  text-transform:uppercase;line-height:1.05;margin-bottom:.6rem;opacity:0;
+  text-wrap:balance;
+}
+.cta-sub{font-size:.5rem;letter-spacing:.5em;color:var(--dim);margin-bottom:4rem;display:block;opacity:0;text-transform:uppercase}
+.cta-btns{display:flex;gap:1.2rem;justify-content:center;opacity:0}
+.btn-p{
+  padding:1.1rem 2.4rem;background:var(--white);color:#000;border:none;
+  font-size:.48rem;letter-spacing:.45em;text-transform:uppercase;cursor:none;transition:opacity .2s;
+}
+.btn-p:hover{opacity:.82}
+.btn-s{
+  padding:1.1rem 2.4rem;background:transparent;color:var(--white);
+  border:1px solid rgba(238,233,224,.3);
+  font-size:.48rem;letter-spacing:.45em;text-transform:uppercase;cursor:none;transition:border-color .2s;
+}
+.btn-s:hover{border-color:var(--white)}
+@media(max-width:900px){
+  .config-inner{grid-template-columns:1fr;gap:3rem}
+  .caseback-panel{grid-template-columns:1fr;gap:3rem}
+  .spec-strip{grid-template-columns:1fr 1fr}
+  .spec-cell:nth-child(2){border-right:none}
+  .spec-cell:nth-child(3){border-top:1px solid var(--rule)}
+  nav{padding:1.5rem 1.5rem}
+}
+@media(prefers-reduced-motion:reduce){
+  .scroll-bar,.sbar{animation:none}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div id="loading-logo">Rolex · Submariner</div>
+  <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+  <div id="loading-status">Initialising</div>
+</div>
+
+<!-- CURSOR -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">Rolex</div>
+  <ul class="nav-items">
+    <li><a href="#movement-wrap">Movement</a></li>
+    <li><a href="#configurator">Configure</a></li>
+    <li><a href="#cta">Reserve</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-inner">
+    <div class="hero-eyebrow">Since 1953 · Oyster Perpetual</div>
+    <h1 class="hero-title">
+      <span class="hero-word"><span>Sub</span></span>
+      <span class="hero-word"><span>mariner</span></span>
+    </h1>
+    <p class="hero-sub">41 mm · Oystersteel · 300 m</p>
+  </div>
+  <div class="hero-line">
+    <span>Scroll</span>
+    <div class="scroll-bar"></div>
+  </div>
+</section>
+
+<!-- MOVEMENT ASSEMBLY -->
+<div id="movement-wrap">
+  <div class="sticky-frame" id="movement-sticky">
+    <canvas id="movement-canvas"></canvas>
+    <div class="mov-caption" id="mov-caption">
+      <div class="mov-label" id="mov-label">The Heart</div>
+      <div class="mov-title" id="mov-title">Calibre 3235</div>
+      <div class="mov-spec" id="mov-spec">28,800 vph · 31 Jewels · 70-hour power reserve</div>
+    </div>
+  </div>
+</div>
+
+<!-- INTERLUDE 1 -->
+<div class="interlude">
+  <span class="interlude-num">I — Precision</span>
+  <h2 class="interlude-heading">The most accurate mechanical movement Rolex has ever produced</h2>
+  <p class="interlude-body">The Calibre 3235 beats at 28,800 vibrations per hour and maintains chronometric precision to ±2 seconds per day after casing — a standard set by the Swiss Official Chronometer Testing Institute.</p>
+</div>
+
+<!-- DIAL ASSEMBLY -->
+<div id="dial-wrap">
+  <div class="sticky-frame" id="dial-sticky">
+    <canvas id="dial-canvas"></canvas>
+    <div class="mov-caption" id="dial-caption">
+      <div class="mov-label" id="dial-label">The Dial</div>
+      <div class="mov-title" id="dial-title">Infinite Black</div>
+      <div class="mov-spec" id="dial-spec">Applied white gold indices · Chromalight luminescence</div>
+    </div>
+  </div>
+</div>
+
+<!-- REVEAL / 3D WATCH -->
+<div id="reveal-wrap">
+  <div class="sticky-frame" id="reveal-sticky">
+    <canvas id="reveal-canvas"></canvas>
+    <div class="reveal-hud" id="reveal-hud" style="opacity:0">
+      <span class="reveal-hud-label">Oyster Perpetual</span>
+      <div class="reveal-hud-name">Submariner Date</div>
+      <span class="reveal-hud-ref">Ref. 126610LN · Oystersteel</span>
+    </div>
+  </div>
+</div>
+
+<!-- SPEC STRIP -->
+<div class="spec-strip">
+  <div class="spec-cell">
+    <span class="spec-name">Diameter</span>
+    <span class="spec-val">41</span>
+    <span class="spec-unit">mm</span>
+  </div>
+  <div class="spec-cell">
+    <span class="spec-name">Water Resistance</span>
+    <span class="spec-val">300</span>
+    <span class="spec-unit">Metres</span>
+  </div>
+  <div class="spec-cell">
+    <span class="spec-name">Power Reserve</span>
+    <span class="spec-val">70</span>
+    <span class="spec-unit">Hours</span>
+  </div>
+  <div class="spec-cell">
+    <span class="spec-name">Frequency</span>
+    <span class="spec-val">28,800</span>
+    <span class="spec-unit">vph</span>
+  </div>
+</div>
+
+<!-- CONFIGURATOR -->
+<section id="configurator">
+  <div class="config-inner">
+    <div id="config-three-wrap">
+      <canvas id="config-canvas"></canvas>
+    </div>
+    <div class="config-right">
+      <div>
+        <span class="config-super">Configure</span>
+        <h2 class="config-heading">Make It Yours</h2>
+      </div>
+      <div>
+        <span class="ctrl-label">Material</span>
+        <div class="ctrl-buttons">
+          <button class="ctrl-btn active" data-mat="steel">Oystersteel</button>
+          <button class="ctrl-btn" data-mat="gold">Everose Gold</button>
+          <button class="ctrl-btn" data-mat="white-gold">White Gold</button>
+          <button class="ctrl-btn" data-mat="two-tone">Two-Tone</button>
+        </div>
+      </div>
+      <div>
+        <span class="ctrl-label">Dial</span>
+        <div class="dial-swatches">
+          <div class="dial-sw active" data-dial="black" style="background:#050505;border-color:rgba(255,255,255,.5)" title="Black"></div>
+          <div class="dial-sw" data-dial="blue" style="background:#0d1f4a" title="Blue"></div>
+          <div class="dial-sw" data-dial="green" style="background:#003020" title="Green"></div>
+          <div class="dial-sw" data-dial="slate" style="background:#2a2a2e" title="Slate"></div>
+        </div>
+      </div>
+      <div>
+        <span class="ctrl-label">View</span>
+        <div class="view-btns">
+          <button class="view-btn active" data-view="front">Front</button>
+          <button class="view-btn" data-view="angle">3/4 View</button>
+          <button class="view-btn" data-view="back">Caseback</button>
+          <button class="view-btn" data-view="explode">Exploded</button>
+        </div>
+      </div>
+      <div class="config-specs">
+        <div class="cs-item"><span class="cs-k">Reference</span><span class="cs-v">126610LN</span></div>
+        <div class="cs-item"><span class="cs-k">Calibre</span><span class="cs-v">3235</span></div>
+        <div class="cs-item"><span class="cs-k">Case</span><span class="cs-v">904L Oystersteel</span></div>
+        <div class="cs-item"><span class="cs-k">Bezel</span><span class="cs-v">Ceramic · 120 clicks</span></div>
+        <div class="cs-item"><span class="cs-k">Crystal</span><span class="cs-v">Sapphire · 9 Mohs</span></div>
+        <div class="cs-item"><span class="cs-k">Bracelet</span><span class="cs-v">Oyster · Glidelock</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CASEBACK DETAIL -->
+<div class="caseback-panel">
+  <div class="cb-text">
+    <span class="cb-eyebrow">II — The Movement</span>
+    <h3 class="cb-title">A rotor of 18 karat gold, winding in both directions</h3>
+    <p class="cb-body">The Perpetual rotor — an invention Rolex patented in 1931 — converts the kinetic energy of the wearer's wrist into stored mechanical power. On the Calibre 3235, the bidirectional oscillating weight is crafted from solid 18 karat gold and never requires manual winding under typical wear conditions.</p>
+  </div>
+  <div class="cb-canvas-wrap">
+    <canvas id="caseback-canvas"></canvas>
+  </div>
+</div>
+
+<!-- CTA -->
+<section id="cta">
+  <canvas id="cta-canvas"></canvas>
+  <div class="cta-inner">
+    <span class="cta-eyebrow">Crafted for Generations</span>
+    <h2 class="cta-headline">A Legend<br>Refined</h2>
+    <span class="cta-sub">Submariner Date · Ref. 126610LN</span>
+    <div class="cta-btns">
+      <button class="btn-p">Locate a Boutique</button>
+      <button class="btn-s">Full Specifications</button>
+    </div>
+  </div>
+</section>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CURSOR
+// ──────────────────────────────────────────────────────────────────────────────
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+(function animCursor(){
+  rx += (mx - rx) * 0.14;
+  ry += (my - ry) * 0.14;
+  cursor.style.left = mx + 'px';
+  cursor.style.top = my + 'px';
+  cursorRing.style.left = rx + 'px';
+  cursorRing.style.top = ry + 'px';
+  requestAnimationFrame(animCursor);
+})();
+document.querySelectorAll('button,.dial-sw,.ctrl-btn,.view-btn').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursor.style.width = '40px'; cursor.style.height = '40px'; });
+  el.addEventListener('mouseleave', () => { cursor.style.width = '6px'; cursor.style.height = '6px'; });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// LOADING
+// ──────────────────────────────────────────────────────────────────────────────
+const loadBar = document.getElementById('loading-bar');
+const loadStatus = document.getElementById('loading-status');
+const steps = ['Polishing steel','Setting jewels','Tensioning mainspring','Regulating escapement','Sealing sapphire','Ready'];
+let loadPct = 0;
+const loadInterval = setInterval(() => {
+  loadPct = Math.min(100, loadPct + Math.random() * 18 + 4);
+  loadBar.style.width = loadPct + '%';
+  loadStatus.textContent = steps[Math.floor(loadPct / 20)] || steps[5];
+  if(loadPct >= 100){
+    clearInterval(loadInterval);
+    setTimeout(() => {
+      gsap.to('#loading', { opacity: 0, duration: .8, onComplete: () => {
+        document.getElementById('loading').style.display = 'none';
+        introAnim();
+      }});
+    }, 300);
+  }
+}, 90);
+
+// ──────────────────────────────────────────────────────────────────────────────
+// HERO PARTICLES
+// ──────────────────────────────────────────────────────────────────────────────
+const hCanvas = document.getElementById('hero-canvas');
+const hCtx = hCanvas.getContext('2d');
+let hW, hH, particles = [];
+function resizeHero(){
+  hW = hCanvas.width = window.innerWidth;
+  hH = hCanvas.height = window.innerHeight;
+}
+resizeHero();
+window.addEventListener('resize', resizeHero);
+for(let i=0;i<200;i++){
+  particles.push({
+    x: Math.random(),
+    y: Math.random(),
+    s: Math.random() * 1.2 + 0.2,
+    a: Math.random(),
+    sp: Math.random() * 0.0002 + 0.00005,
+    drift: (Math.random() - .5) * 0.00008
+  });
+}
+let heroT = 0;
+function drawHero(){
+  heroT++;
+  hCtx.clearRect(0,0,hW,hH);
+  // Radial glow
+  const grd = hCtx.createRadialGradient(hW/2,hH/2,0,hW/2,hH/2,hW*.6);
+  grd.addColorStop(0,'rgba(255,255,255,0.025)');
+  grd.addColorStop(1,'rgba(0,0,0,0)');
+  hCtx.fillStyle = grd;
+  hCtx.fillRect(0,0,hW,hH);
+  // Particles
+  particles.forEach(p => {
+    p.y -= p.sp;
+    p.x += p.drift;
+    if(p.y < 0) p.y = 1;
+    if(p.x < 0) p.x = 1;
+    if(p.x > 1) p.x = 0;
+    const alpha = .15 + .55 * Math.abs(Math.sin(heroT * 0.008 + p.a * 10));
+    hCtx.beginPath();
+    hCtx.arc(p.x*hW, p.y*hH, p.s, 0, Math.PI*2);
+    hCtx.fillStyle = `rgba(238,233,224,${alpha})`;
+    hCtx.fill();
+  });
+  requestAnimationFrame(drawHero);
+}
+drawHero();
+
+// ──────────────────────────────────────────────────────────────────────────────
+// INTRO ANIMATION
+// ──────────────────────────────────────────────────────────────────────────────
+function introAnim(){
+  gsap.registerPlugin(ScrollTrigger);
+  const tl = gsap.timeline({ defaults: { ease: 'power3.out' }});
+  tl.to('.hero-word span', { y: '0%', duration: 1.4, stagger: .15 })
+    .to('.hero-eyebrow', { opacity: 1, y: 0, duration: .8 }, '-=.8')
+    .to('.hero-sub', { opacity: 1, duration: .8 }, '-=.4')
+    .to('.hero-line', { opacity: 1, duration: .8 }, '-=.4')
+    .to('.nav-brand', { opacity: 1, duration: .6 }, '-=.4')
+    .to('.nav-items a', { opacity: 1, duration: .6, stagger: .08 }, '-=.4');
+
+  initScrollAnimations();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// MOVEMENT CANVAS ANIMATION
+// ──────────────────────────────────────────────────────────────────────────────
+const mCanvas = document.getElementById('movement-canvas');
+const mCtx = mCanvas.getContext('2d');
+let mW, mH;
+function resizeMov(){
+  mW = mCanvas.width = window.innerWidth;
+  mH = mCanvas.height = window.innerHeight;
+}
+resizeMov();
+window.addEventListener('resize', resizeMov);
+
+let movProgress = 0; // 0 → 1 controlled by scroll
+let balanceAngle = 0;
+let balanceDelta = 0.04;
+
+function steelGrad(ctx, x, y, r, lightAngle = -0.8) {
+  const g = ctx.createRadialGradient(x + r*Math.cos(lightAngle), y + r*Math.sin(lightAngle)*0.5, 0, x, y, r*1.8);
+  g.addColorStop(0,'rgba(220,218,212,1)');
+  g.addColorStop(.35,'rgba(180,178,174,1)');
+  g.addColorStop(.7,'rgba(140,138,136,1)');
+  g.addColorStop(1,'rgba(90,88,86,1)');
+  return g;
+}
+
+function drawGear(ctx, x, y, outerR, innerR, teeth, phase=0, alpha=1){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  ctx.rotate(phase);
+  ctx.beginPath();
+  const toothAngle = (Math.PI * 2) / teeth;
+  for(let i=0;i<teeth;i++){
+    const a = i * toothAngle;
+    const a1 = a - toothAngle * 0.18;
+    const a2 = a - toothAngle * 0.08;
+    const a3 = a + toothAngle * 0.08;
+    const a4 = a + toothAngle * 0.18;
+    ctx.lineTo(Math.cos(a1)*innerR, Math.sin(a1)*innerR);
+    ctx.lineTo(Math.cos(a2)*outerR, Math.sin(a2)*outerR);
+    ctx.lineTo(Math.cos(a3)*outerR, Math.sin(a3)*outerR);
+    ctx.lineTo(Math.cos(a4)*innerR, Math.sin(a4)*innerR);
+  }
+  ctx.closePath();
+  const g = ctx.createRadialGradient(-outerR*.3,-outerR*.4,0,0,0,outerR*1.4);
+  g.addColorStop(0,'rgba(215,212,206,1)');
+  g.addColorStop(.5,'rgba(170,168,164,1)');
+  g.addColorStop(1,'rgba(110,108,106,1)');
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(80,78,76,0.6)';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+  // Hub
+  ctx.beginPath();
+  ctx.arc(0,0,innerR*.28,0,Math.PI*2);
+  ctx.fillStyle = '#5a5856';
+  ctx.fill();
+  // Jewel
+  ctx.beginPath();
+  ctx.arc(0,0,innerR*.14,0,Math.PI*2);
+  ctx.fillStyle = 'rgba(180,30,40,0.9)';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawMainplate(ctx, x, y, r, alpha=1){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x,y);
+  ctx.beginPath();
+  ctx.arc(0,0,r,0,Math.PI*2);
+  const g = ctx.createRadialGradient(-r*.2,-r*.3,0,0,0,r*1.5);
+  g.addColorStop(0,'rgba(195,192,188,1)');
+  g.addColorStop(.6,'rgba(155,152,150,1)');
+  g.addColorStop(1,'rgba(105,102,100,1)');
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(60,58,56,.5)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Circular grain
+  for(let ring=1;ring<=6;ring++){
+    ctx.beginPath();
+    ctx.arc(0,0,r*(ring/7),0,Math.PI*2);
+    ctx.strokeStyle = `rgba(255,255,255,${0.04 - ring*.004})`;
+    ctx.lineWidth = .5;
+    ctx.stroke();
+  }
+  // Jewel holes
+  const jPositions = [
+    [r*.38, 0],[r*.55,r*.35],[-r*.35,r*.45],[0,-r*.5],[r*.3,-r*.3],[-r*.45,-r*.2]
+  ];
+  jPositions.forEach(([jx,jy]) => {
+    ctx.beginPath();
+    ctx.arc(jx,jy,r*.055,0,Math.PI*2);
+    ctx.fillStyle = '#3a3836';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(jx,jy,r*.03,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(180,28,38,0.88)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(jx+r*.008,jy-r*.008,r*.01,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(255,160,160,0.6)';
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawBarrel(ctx, x, y, r, alpha=1){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x,y);
+  // Barrel body
+  ctx.beginPath();
+  ctx.arc(0,0,r,0,Math.PI*2);
+  const g = ctx.createRadialGradient(-r*.25,-r*.3,0,0,0,r*1.6);
+  g.addColorStop(0,'rgba(210,207,202,1)');
+  g.addColorStop(.5,'rgba(165,162,158,1)');
+  g.addColorStop(1,'rgba(100,98,96,1)');
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(60,58,56,.5)';
+  ctx.lineWidth=1;
+  ctx.stroke();
+  // Spiral spring
+  ctx.save();
+  const springLayers = 7;
+  for(let l=0;l<springLayers;l++){
+    const sr = r * (0.12 + l * 0.085);
+    ctx.beginPath();
+    ctx.arc(0,0,sr, -Math.PI*.5, Math.PI*1.7);
+    ctx.strokeStyle = `rgba(180,175,168,${0.6 - l*.06})`;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+  ctx.restore();
+  // Center arbor
+  ctx.beginPath();
+  ctx.arc(0,0,r*.1,0,Math.PI*2);
+  ctx.fillStyle = '#7a7876';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawBridge(ctx, x, y, w, h, rx2, alpha=1){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x,y);
+  ctx.beginPath();
+  ctx.roundRect(-w/2,-h/2,w,h,rx2);
+  const g = ctx.createLinearGradient(-w/2,-h/2,w/2,h/2);
+  g.addColorStop(0,'rgba(215,212,207,.92)');
+  g.addColorStop(.5,'rgba(175,172,168,.88)');
+  g.addColorStop(1,'rgba(130,128,126,.92)');
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(80,78,76,.4)';
+  ctx.lineWidth=.8;
+  ctx.stroke();
+  // Bevel highlights
+  ctx.beginPath();
+  ctx.roundRect(-w/2+1,-h/2+1,w-2,h-2,Math.max(0,rx2-1));
+  ctx.strokeStyle = 'rgba(255,255,255,.18)';
+  ctx.lineWidth=.6;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawBalanceWheel(ctx, x, y, r, angle, alpha=1){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x,y);
+  ctx.rotate(angle);
+  // Rim
+  ctx.beginPath();
+  ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.strokeStyle = 'rgba(195,192,188,.9)';
+  ctx.lineWidth = r*.06;
+  ctx.stroke();
+  // 3 spokes
+  for(let i=0;i<3;i++){
+    const a = (i/3)*Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.lineTo(Math.cos(a)*r*.95, Math.sin(a)*r*.95);
+    ctx.strokeStyle = 'rgba(185,182,178,.8)';
+    ctx.lineWidth = r*.04;
+    ctx.stroke();
+  }
+  // Hairspring (Breguet style)
+  ctx.save();
+  for(let sp=0;sp<8;sp++){
+    const sr = r * (.12 + sp*.085);
+    const startA = sp * Math.PI * .28;
+    ctx.beginPath();
+    ctx.arc(0,0,sr,startA, startA + Math.PI*1.85);
+    ctx.strokeStyle = `rgba(200,196,190,${.5 - sp*.04})`;
+    ctx.lineWidth = .6;
+    ctx.stroke();
+  }
+  ctx.restore();
+  // Hub
+  ctx.beginPath();
+  ctx.arc(0,0,r*.08,0,Math.PI*2);
+  ctx.fillStyle = '#6a6864';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawRotor(ctx, x, y, r, angle, alpha=1){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x,y);
+  ctx.rotate(angle);
+  // Half-circle rotor (gold)
+  ctx.beginPath();
+  ctx.arc(0,0,r, 0, Math.PI);
+  ctx.closePath();
+  const g = ctx.createRadialGradient(-r*.2,r*.1,0,0,0,r*1.4);
+  g.addColorStop(0,'rgba(220,185,110,1)');
+  g.addColorStop(.4,'rgba(185,150,75,1)');
+  g.addColorStop(1,'rgba(140,105,40,1)');
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(100,75,20,.5)';
+  ctx.lineWidth=1;
+  ctx.stroke();
+  // "18K" text hint
+  ctx.fillStyle = 'rgba(255,230,150,.4)';
+  ctx.font = `${r*.12}px Helvetica`;
+  ctx.textAlign = 'center';
+  ctx.fillText('18K', 0, r*.4);
+  // Hub
+  ctx.beginPath();
+  ctx.arc(0,0,r*.1,0,Math.PI*2);
+  ctx.fillStyle = '#8a8270';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSpotlight(ctx, x, y, r, spread=1.2){
+  const g = ctx.createRadialGradient(x,y,0,x,y,r*spread);
+  g.addColorStop(0,'rgba(0,0,0,0)');
+  g.addColorStop(.5,'rgba(0,0,0,0)');
+  g.addColorStop(1,'rgba(0,0,0,.92)');
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,mW,mH);
+}
+
+function drawTextLabel(ctx, x, y, label, value, spec, alpha=1){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  // Label
+  ctx.fillStyle = 'rgba(238,233,224,.38)';
+  ctx.font = `${Math.min(mW,mH)*.012}px Helvetica Neue,Helvetica,sans-serif`;
+  ctx.letterSpacing = '0.5em';
+  ctx.textAlign='center';
+  ctx.fillText(label.toUpperCase(), x, y);
+  // Value
+  ctx.fillStyle = 'rgba(238,233,224,1)';
+  ctx.font = `normal ${Math.min(mW,mH)*.04}px Georgia,serif`;
+  ctx.fillText(value, x, y + Math.min(mW,mH)*.05);
+  // Spec
+  ctx.fillStyle = 'rgba(238,233,224,.38)';
+  ctx.font = `${Math.min(mW,mH)*.012}px Helvetica Neue`;
+  ctx.fillText(spec, x, y + Math.min(mW,mH)*.09);
+  ctx.restore();
+}
+
+let movGearAngle = 0;
+
+function drawMovement(progress){
+  mCtx.clearRect(0,0,mW,mH);
+  mCtx.fillStyle='#000';
+  mCtx.fillRect(0,0,mW,mH);
+
+  const cx = mW/2, cy = mH/2;
+  const scale = Math.min(mW,mH) * .0024;
+  const R = Math.min(mW,mH) * .32;
+
+  movGearAngle += 0.012;
+  balanceAngle += balanceDelta;
+  if(Math.abs(balanceAngle) > 1.1){ balanceDelta *= -1; }
+
+  // Stage 0: mainplate appears
+  const p0 = Math.min(1, progress / .12);
+  if(p0 > 0) drawMainplate(mCtx, cx, cy, R * 1.05, p0);
+
+  // Stage 1: barrel
+  const p1 = Math.min(1, Math.max(0, (progress - .10) / .10));
+  if(p1 > 0) drawBarrel(mCtx, cx + R*.38, cy - R*.2, R*.24, p1);
+
+  // Stage 2: gear train
+  const p2 = Math.min(1, Math.max(0, (progress - .20) / .10));
+  if(p2 > 0){
+    drawGear(mCtx, cx - R*.05, cy + R*.05, R*.22, R*.17, 56, movGearAngle, p2);
+    drawGear(mCtx, cx + R*.10, cy - R*.28, R*.14, R*.10, 36, -movGearAngle*1.56, p2);
+    drawGear(mCtx, cx - R*.30, cy - R*.20, R*.11, R*.08, 28, movGearAngle*2.0, p2);
+  }
+
+  // Stage 3: escape wheel
+  const p3 = Math.min(1, Math.max(0, (progress - .30) / .10));
+  if(p3 > 0){
+    drawGear(mCtx, cx - R*.42, cy + R*.28, R*.12, R*.085, 15, movGearAngle*3.5, p3);
+    // Pallet fork
+    mCtx.save();
+    mCtx.globalAlpha = p3;
+    mCtx.translate(cx - R*.28, cy + R*.38);
+    mCtx.rotate(Math.sin(movGearAngle * 3) * .35);
+    mCtx.beginPath();
+    mCtx.moveTo(0,0);
+    mCtx.lineTo(-R*.1, -R*.15);
+    mCtx.lineTo(-R*.14, -R*.1);
+    mCtx.lineTo(R*.08, R*.16);
+    mCtx.lineTo(R*.14, R*.1);
+    mCtx.closePath();
+    mCtx.fillStyle = 'rgba(185,182,178,.85)';
+    mCtx.fill();
+    mCtx.strokeStyle='rgba(100,98,96,.5)';
+    mCtx.lineWidth=.6;
+    mCtx.stroke();
+    // Jewel stones
+    [[-R*.1,-R*.14],[R*.09,R*.14]].forEach(([jx,jy]) => {
+      mCtx.beginPath();
+      mCtx.arc(jx,jy,R*.025,0,Math.PI*2);
+      mCtx.fillStyle='rgba(180,28,38,.88)';
+      mCtx.fill();
+    });
+    mCtx.restore();
+  }
+
+  // Stage 4: balance wheel
+  const p4 = Math.min(1, Math.max(0, (progress - .40) / .10));
+  if(p4 > 0) drawBalanceWheel(mCtx, cx + R*.28, cy + R*.45, R*.20, balanceAngle, p4);
+
+  // Stage 5: bridges
+  const p5 = Math.min(1, Math.max(0, (progress - .50) / .12));
+  if(p5 > 0){
+    drawBridge(mCtx, cx - R*.05, cy - R*.05, R*1.4, R*.28, 8, p5 * .78);
+    drawBridge(mCtx, cx + R*.30, cy + R*.38, R*.65, R*.18, 6, p5 * .72);
+    drawBridge(mCtx, cx - R*.35, cy - R*.35, R*.45, R*.14, 5, p5 * .70);
+  }
+
+  // Stage 6: rotor
+  const p6 = Math.min(1, Math.max(0, (progress - .65) / .12));
+  if(p6 > 0) drawRotor(mCtx, cx, cy, R*.72, movGearAngle * .3, p6);
+
+  // Spotlight vignette
+  const vigR = R * (1.6 + (1 - progress) * 2.5);
+  drawSpotlight(mCtx, cx, cy, vigR, 1.0);
+
+  // Top ambient dim
+  mCtx.fillStyle = `rgba(0,0,0,${Math.max(0, .7 - progress * .9)})`;
+  mCtx.fillRect(0,0,mW,mH);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// DIAL CANVAS ANIMATION
+// ──────────────────────────────────────────────────────────────────────────────
+const dCanvas = document.getElementById('dial-canvas');
+const dCtx = dCanvas.getContext('2d');
+let dW, dH;
+function resizeDial(){
+  dW = dCanvas.width = window.innerWidth;
+  dH = dCanvas.height = window.innerHeight;
+}
+resizeDial();
+window.addEventListener('resize', resizeDial);
+
+let dialProgress = 0;
+
+function drawDial(progress){
+  dCtx.clearRect(0,0,dW,dH);
+  dCtx.fillStyle='#000';
+  dCtx.fillRect(0,0,dW,dH);
+
+  const cx = dW/2, cy = dH/2;
+  const R = Math.min(dW,dH) * .30;
+
+  // --- Movement base (carry over from previous section)
+  dCtx.save();
+  dCtx.globalAlpha = .25 + .08 * progress;
+  drawMainplate(dCtx, cx, cy + R * .05, R * 1.05, 1);
+  dCtx.restore();
+
+  // --- Dial disc descends
+  const dialY = cy - R * 1.6 * (1 - Math.min(1, progress * 3));
+  const dialAlpha = Math.min(1, progress * 4);
+  if(dialAlpha > 0){
+    dCtx.save();
+    dCtx.globalAlpha = dialAlpha;
+    dCtx.translate(cx, dialY);
+    // Dial base
+    dCtx.beginPath();
+    dCtx.arc(0,0,R,0,Math.PI*2);
+    dCtx.fillStyle='#050505';
+    dCtx.fill();
+    // Subtle micro-satin texture ring
+    dCtx.beginPath();
+    dCtx.arc(0,0,R*.96,0,Math.PI*2);
+    dCtx.strokeStyle='rgba(255,255,255,.04)';
+    dCtx.lineWidth=R*.015;
+    dCtx.stroke();
+    // Minute track
+    for(let m=0;m<60;m++){
+      const a = (m/60)*Math.PI*2 - Math.PI/2;
+      const isHour = m%5===0;
+      const len = isHour ? R*.07 : R*.035;
+      const r0 = R*.91, r1 = r0 - len;
+      dCtx.beginPath();
+      dCtx.moveTo(Math.cos(a)*r0, Math.sin(a)*r0);
+      dCtx.lineTo(Math.cos(a)*r1, Math.sin(a)*r1);
+      dCtx.strokeStyle = isHour ? 'rgba(255,255,255,.6)' : 'rgba(255,255,255,.25)';
+      dCtx.lineWidth = isHour ? 1.2 : .6;
+      dCtx.stroke();
+    }
+    dCtx.restore();
+  }
+
+  // --- Hour markers appear one by one
+  const markerProgress = Math.min(1, Math.max(0, (progress - .22) / .5));
+  const markersShowing = Math.floor(markerProgress * 12);
+  const markerPositions = [
+    [0, -1], [.5, -.866], [.866, -.5], [1, 0],
+    [.866, .5], [.5, .866], [0, 1], [-.5, .866],
+    [-.866, .5], [-1, 0], [-.866, -.5], [-.5, -.866]
+  ];
+  if(dialAlpha > 0){
+    dCtx.save();
+    dCtx.translate(cx, dialY);
+    markerPositions.forEach(([mx2, my2], i) => {
+      if(i > markersShowing) return;
+      const flash = i === markersShowing ? Math.min(1, (markerProgress * 12 - i) * 3) : 1;
+      const mAlpha = dialAlpha * flash;
+      dCtx.globalAlpha = mAlpha;
+      const px = mx2 * R * .72, py = my2 * R * .72;
+      if(i === 0){ // Triangle at 12
+        dCtx.beginPath();
+        dCtx.moveTo(px, py - R*.062);
+        dCtx.lineTo(px - R*.03, py + R*.04);
+        dCtx.lineTo(px + R*.03, py + R*.04);
+        dCtx.closePath();
+        dCtx.fillStyle='rgba(240,238,232,.95)';
+        dCtx.fill();
+        // Lume fill
+        dCtx.beginPath();
+        dCtx.moveTo(px, py - R*.052);
+        dCtx.lineTo(px - R*.022, py + R*.032);
+        dCtx.lineTo(px + R*.022, py + R*.032);
+        dCtx.closePath();
+        dCtx.fillStyle='rgba(170,200,180,.85)';
+        dCtx.fill();
+      } else if(i===3||i===6||i===9){
+        dCtx.fillStyle='rgba(240,238,232,.95)';
+        dCtx.fillRect(px-R*.055, py-R*.022, R*.11, R*.044);
+        dCtx.fillStyle='rgba(170,200,180,.8)';
+        dCtx.fillRect(px-R*.042, py-R*.014, R*.084, R*.028);
+      } else {
+        dCtx.beginPath();
+        dCtx.arc(px, py, R*.03, 0, Math.PI*2);
+        dCtx.fillStyle='rgba(240,238,232,.95)';
+        dCtx.fill();
+        dCtx.beginPath();
+        dCtx.arc(px, py, R*.020, 0, Math.PI*2);
+        dCtx.fillStyle='rgba(170,200,180,.85)';
+        dCtx.fill();
+      }
+    });
+    dCtx.restore();
+  }
+
+  // --- Dial text
+  const textProgress = Math.min(1, Math.max(0, (progress - .55) / .3));
+  if(dialAlpha > 0 && textProgress > 0){
+    dCtx.save();
+    dCtx.globalAlpha = dialAlpha * textProgress;
+    dCtx.translate(cx, dialY);
+    dCtx.textAlign='center';
+    dCtx.fillStyle='rgba(238,233,224,.9)';
+    const fs = R*.065;
+    dCtx.font=`normal ${fs}px Georgia,serif`;
+    dCtx.fillText('ROLEX', 0, -R*.28);
+    dCtx.font=`300 ${fs*.62}px Helvetica Neue,sans-serif`;
+    dCtx.letterSpacing='0.35em';
+    dCtx.fillStyle='rgba(238,233,224,.6)';
+    dCtx.fillText('OYSTER PERPETUAL', 0, -R*.175);
+    dCtx.font=`300 ${fs*.72}px Helvetica Neue,sans-serif`;
+    dCtx.fillStyle='rgba(238,233,224,.85)';
+    dCtx.fillText('SUBMARINER', 0, -R*.06);
+    dCtx.font=`300 ${fs*.5}px Helvetica Neue,sans-serif`;
+    dCtx.fillStyle='rgba(238,233,224,.4)';
+    dCtx.fillText('1000ft=300m', 0, R*.04);
+    dCtx.restore();
+  }
+
+  // --- Hands appear
+  const handProgress = Math.min(1, Math.max(0, (progress - .72) / .22));
+  if(dialAlpha > 0 && handProgress > 0){
+    dCtx.save();
+    dCtx.translate(cx, dialY);
+    dCtx.globalAlpha = dialAlpha * handProgress;
+    // Hour hand (Mercedes) at ~10:10 position
+    const hourA = -Math.PI/2 + Math.PI * .33;
+    dCtx.save();
+    dCtx.rotate(hourA);
+    dCtx.fillStyle='rgba(240,238,232,.95)';
+    dCtx.fillRect(-R*.025, -R*.46, R*.05, R*.20); // stem
+    dCtx.beginPath();
+    dCtx.arc(0, -R*.28, R*.065, 0, Math.PI*2); // Mercedes circle
+    dCtx.fillStyle='rgba(240,238,232,.95)';
+    dCtx.fill();
+    dCtx.beginPath();
+    dCtx.arc(0, -R*.28, R*.040, 0, Math.PI*2);
+    dCtx.fillStyle='rgba(170,200,180,.85)';
+    dCtx.fill();
+    dCtx.restore();
+    // Minute hand at 10 position
+    const minA = -Math.PI/2 - Math.PI * .67;
+    dCtx.save();
+    dCtx.rotate(minA);
+    dCtx.fillStyle='rgba(240,238,232,.95)';
+    dCtx.fillRect(-R*.016, -R*.72, R*.032, R*.32);
+    // Lume pip on minute hand
+    dCtx.fillStyle='rgba(170,200,180,.85)';
+    dCtx.fillRect(-R*.011, -R*.65, R*.022, R*.20);
+    dCtx.restore();
+    // Seconds hand
+    const secA2 = -Math.PI/2 + Math.PI * .8;
+    dCtx.save();
+    dCtx.rotate(secA2);
+    dCtx.fillStyle='rgba(240,238,232,.85)';
+    dCtx.fillRect(-R*.005, -R*.77, R*.010, R*.28);
+    // Counterweight
+    dCtx.fillRect(-R*.012, R*.04, R*.024, R*.10);
+    // Pip
+    dCtx.beginPath();
+    dCtx.arc(0, -R*.55, R*.022, 0, Math.PI*2);
+    dCtx.fillStyle='rgba(170,200,180,.9)';
+    dCtx.fill();
+    dCtx.restore();
+    dCtx.restore();
+  }
+
+  // Spotlight vignette
+  drawSpotlightDial(dCtx, cx, cy, R * 1.6, 1.0);
+}
+
+function drawSpotlightDial(ctx, x, y, r, alpha=1){
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  const g = ctx.createRadialGradient(x,y*.92,0,x,y,r*1.3);
+  g.addColorStop(0,'rgba(0,0,0,0)');
+  g.addColorStop(.55,'rgba(0,0,0,0)');
+  g.addColorStop(1,'rgba(0,0,0,.94)');
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,dW,dH);
+  ctx.restore();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// THREE.JS WATCH (Reveal + Config + Caseback)
+// ──────────────────────────────────────────────────────────────────────────────
+let threeInitialized = false;
+let watchScene, watchCamera, watchRenderer, watchControls;
+let watchGroup, dialMesh, crystalMesh;
+let configScene, configCamera, configRenderer, configControls;
+let configWatchGroup;
+let casebackScene, casebackCamera, casebackRenderer;
+let currentMat = 'steel', currentDial = 'black', currentView = 'front';
+let revealProgress = 0;
+let explodeProgress = 0, targetExplode = 0;
+let rotorAngle = 0;
+
+const MAT_COLORS = {
+  steel: { case: 0xC4C4C8, brush: 0xAEAEB2, roughness: .12, brushRough: .42 },
+  gold: { case: 0xCB9B52, brush: 0xBB8B42, roughness: .08, brushRough: .35 },
+  'white-gold': { case: 0xE2E0DC, brush: 0xD2D0CC, roughness: .07, brushRough: .32 },
+  'two-tone': { case: 0xC4C4C8, brush: 0xCB9B52, roughness: .12, brushRough: .35 }
+};
+const DIAL_COLORS = {
+  black: 0x050505,
+  blue: 0x0D1F4A,
+  green: 0x003020,
+  slate: 0x2A2A2E
+};
+
+function makeMaterials(matKey){
+  const mc = MAT_COLORS[matKey];
+  return {
+    polished: new THREE.MeshStandardMaterial({ color: mc.case, metalness: .96, roughness: mc.roughness, envMapIntensity: 1.5 }),
+    brushed: new THREE.MeshStandardMaterial({ color: mc.brush, metalness: .88, roughness: mc.brushRough, envMapIntensity: 1.2 }),
+    ceramic: new THREE.MeshStandardMaterial({ color: 0x060606, metalness: .08, roughness: .06, envMapIntensity: 2.0 }),
+    dial: new THREE.MeshStandardMaterial({ color: DIAL_COLORS[currentDial], metalness: .02, roughness: .28, envMapIntensity: .5 }),
+    crystal: new THREE.MeshPhysicalMaterial({ color: 0xDDEEFF, metalness: 0, roughness: 0, transmission: .92, transparent: true, opacity: .12, thickness: .4, ior: 1.52, envMapIntensity: 2.5 }),
+    lume: new THREE.MeshStandardMaterial({ color: 0xAADDBB, emissive: new THREE.Color(0x224433), emissiveIntensity: .4, metalness: 0, roughness: .4 }),
+    marker: new THREE.MeshStandardMaterial({ color: 0xF0EEEA, metalness: .7, roughness: .18, envMapIntensity: 1.4 }),
+    gold: new THREE.MeshStandardMaterial({ color: 0xC9A84C, metalness: .9, roughness: .12, envMapIntensity: 1.8 })
+  };
+}
+
+function buildWatchGroup(mats){
+  const g = new THREE.Group();
+  const { polished, brushed, ceramic, dial, crystal, lume, marker, gold } = mats;
+
+  // CASE BODY
+  const caseGeom = new THREE.CylinderGeometry(1.0, 1.0, .28, 128);
+  const caseBody = new THREE.Mesh(caseGeom, brushed);
+  caseBody.userData.explodeOffset = new THREE.Vector3(0,0,0);
+  g.add(caseBody);
+
+  // CASE SIDES (polished)
+  const sideGeom = new THREE.CylinderGeometry(1.0, 1.0, .28, 128, 1, true);
+  const caseSides = new THREE.Mesh(sideGeom, polished);
+  g.add(caseSides);
+
+  // BEZEL RING
+  const bezelRing = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.04, 1.0, .10, 128),
+    polished
+  );
+  bezelRing.position.y = .19;
+  bezelRing.userData.explodeOffset = new THREE.Vector3(0,.4,0);
+  g.add(bezelRing);
+
+  // CERAMIC INSERT
+  const ceramicInsert = new THREE.Mesh(
+    new THREE.CylinderGeometry(.99, .99, .078, 128),
+    ceramic
+  );
+  ceramicInsert.position.y = .21;
+  ceramicInsert.userData.explodeOffset = new THREE.Vector3(0,.4,0);
+  g.add(ceramicInsert);
+
+  // BEZEL TEETH (knurling)
+  const toothCount = 120;
+  const toothGroup = new THREE.Group();
+  for(let i=0;i<toothCount;i++){
+    const a = (i/toothCount)*Math.PI*2;
+    const tm = new THREE.Mesh(
+      new THREE.BoxGeometry(.013,.10,.028),
+      brushed
+    );
+    tm.position.set(Math.cos(a)*1.038, .19, Math.sin(a)*1.038);
+    tm.rotation.y = -a;
+    toothGroup.add(tm);
+  }
+  toothGroup.userData.explodeOffset = new THREE.Vector3(0,.4,0);
+  g.add(toothGroup);
+
+  // CRYSTAL
+  crystalMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(.955, .955, .038, 128),
+    crystal
+  );
+  crystalMesh.position.y = .26;
+  crystalMesh.userData.explodeOffset = new THREE.Vector3(0,.7,0);
+  g.add(crystalMesh);
+
+  // DIAL
+  dialMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(.92, .92, .014, 128),
+    dial
+  );
+  dialMesh.position.y = .148;
+  dialMesh.userData.explodeOffset = new THREE.Vector3(0,.5,0);
+  g.add(dialMesh);
+
+  // DIAL CANVAS TEXTURE
+  const dtCanvas = document.createElement('canvas');
+  dtCanvas.width = 512; dtCanvas.height = 512;
+  const dtx = dtCanvas.getContext('2d');
+  dtx.fillStyle='#050505';
+  dtx.beginPath();
+  dtx.arc(256,256,256,0,Math.PI*2);
+  dtx.fill();
+  dtx.textAlign='center';
+  dtx.fillStyle='rgba(238,233,224,.88)';
+  dtx.font='bold 28px Georgia,serif';
+  dtx.fillText('ROLEX',256,178);
+  dtx.font='13px Helvetica';
+  dtx.fillStyle='rgba(238,233,224,.5)';
+  dtx.fillText('OYSTER PERPETUAL',256,202);
+  dtx.font='18px Helvetica';
+  dtx.fillStyle='rgba(238,233,224,.8)';
+  dtx.fillText('SUBMARINER',256,224);
+  dtx.font='10px Helvetica';
+  dtx.fillStyle='rgba(238,233,224,.35)';
+  dtx.fillText('1000ft=300m',256,242);
+  // Minute track
+  for(let mt=0;mt<60;mt++){
+    const a=(mt/60)*Math.PI*2-Math.PI/2;
+    const isH=mt%5===0;
+    const r0=240,r1=r0-(isH?22:10);
+    dtx.beginPath();
+    dtx.moveTo(256+Math.cos(a)*r0,256+Math.sin(a)*r0);
+    dtx.lineTo(256+Math.cos(a)*r1,256+Math.sin(a)*r1);
+    dtx.strokeStyle=isH?'rgba(238,233,224,.55)':'rgba(238,233,224,.22)';
+    dtx.lineWidth=isH?2:.8;
+    dtx.stroke();
+  }
+  const dtTex = new THREE.CanvasTexture(dtCanvas);
+  dial.map = dtTex;
+  dial.needsUpdate = true;
+  dialMesh.rotation.y = -Math.PI / 2;
+
+  // HOUR MARKERS on dial
+  const markerGroup = new THREE.Group();
+  markerGroup.position.y = .156;
+  markerGroup.userData.explodeOffset = new THREE.Vector3(0,.5,0);
+  for(let i=0;i<12;i++){
+    const a = (i/12)*Math.PI*2;
+    const mr = .74;
+    let mGeom;
+    if(i===0){
+      const s = new THREE.Shape();
+      s.moveTo(-.038,.05); s.lineTo(.038,.05); s.lineTo(0,-.05); s.closePath();
+      mGeom = new THREE.ShapeGeometry(s);
+    } else if(i===3||i===6||i===9){
+      mGeom = new THREE.PlaneGeometry(.08,.022);
+    } else {
+      mGeom = new THREE.CircleGeometry(.032, 32);
+    }
+    const mm = new THREE.Mesh(mGeom, marker);
+    mm.position.set(Math.sin(a)*mr, .006, Math.cos(a)*mr);
+    if(i!==0) mm.rotation.y = -a;
+    mm.rotation.x = -Math.PI/2;
+    markerGroup.add(mm);
+    // Lume
+    const lm = new THREE.Mesh(new THREE.CircleGeometry(.020,32), lume);
+    lm.position.set(Math.sin(a)*mr,.007,Math.cos(a)*mr);
+    lm.rotation.x = -Math.PI/2;
+    markerGroup.add(lm);
+  }
+  g.add(markerGroup);
+
+  // HANDS GROUP
+  const handsGroup = new THREE.Group();
+  handsGroup.position.y = .168;
+  handsGroup.userData.explodeOffset = new THREE.Vector3(0,.5,0);
+  // Hour hand (Mercedes)
+  const hourA = Math.PI * .33;
+  const hourHand = new THREE.Group();
+  hourHand.rotation.y = hourA;
+  const hStem = new THREE.Mesh(new THREE.BoxGeometry(.052,.010,.30), brushed);
+  hStem.position.z = .06;
+  hourHand.add(hStem);
+  const hCircle = new THREE.Mesh(new THREE.CylinderGeometry(.072,.072,.010,32), brushed);
+  hCircle.rotation.x = Math.PI/2;
+  hCircle.position.z = -.10;
+  hourHand.add(hCircle);
+  const hLume = new THREE.Mesh(new THREE.CylinderGeometry(.048,.048,.004,32), lume);
+  hLume.rotation.x = Math.PI/2;
+  hLume.position.set(0,.006,-.10);
+  hourHand.add(hLume);
+  handsGroup.add(hourHand);
+  // Minute hand
+  const minA2 = -Math.PI * .67;
+  const minHand = new THREE.Group();
+  minHand.rotation.y = minA2;
+  const minGeom = new THREE.BoxGeometry(.030,.009,.70);
+  const minM = new THREE.Mesh(minGeom, brushed);
+  minM.position.z = .06;
+  minHand.add(minM);
+  const minLume = new THREE.Mesh(new THREE.BoxGeometry(.020,.005,.36), lume);
+  minLume.position.set(0,.007,-.10);
+  minHand.add(minLume);
+  handsGroup.add(minHand);
+  // Seconds hand
+  const secA3 = Math.PI * .8;
+  const secHand = new THREE.Group();
+  secHand.rotation.y = secA3;
+  secHand.add(new THREE.Mesh(new THREE.BoxGeometry(.008,.007,.78), brushed));
+  const secPip = new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.005,32), lume);
+  secPip.rotation.x=Math.PI/2;
+  secPip.position.z=-.42;
+  secHand.add(secPip);
+  handsGroup.add(secHand);
+  g.add(handsGroup);
+
+  // REHAUT
+  const rehaGeo = new THREE.CylinderGeometry(.960,.960,.015,128,1,true);
+  const rehaut = new THREE.Mesh(rehaGeo, polished);
+  rehaut.position.y = .148;
+  g.add(rehaut);
+
+  // CROWN
+  const crownGroup = new THREE.Group();
+  crownGroup.rotation.z = Math.PI/2;
+  crownGroup.position.set(1.12,0,0);
+  const crownBody = new THREE.Mesh(new THREE.CylinderGeometry(.072,.072,.082,32), brushed);
+  // Fluting
+  for(let f=0;f<24;f++){
+    const fa=(f/24)*Math.PI*2;
+    const ft=new THREE.Mesh(new THREE.BoxGeometry(.010,.082,.016),brushed);
+    ft.position.set(Math.cos(fa)*.074,0,Math.sin(fa)*.074);
+    ft.rotation.y=-fa;
+    crownGroup.add(ft);
+  }
+  crownGroup.add(crownBody);
+  crownGroup.userData.explodeOffset = new THREE.Vector3(.6,0,0);
+  g.add(crownGroup);
+
+  // CROWN GUARDS
+  const cgMat = polished;
+  const cgTop = new THREE.Mesh(new THREE.BoxGeometry(.12,.28,.085),cgMat);
+  cgTop.position.set(1.0,.14,0);
+  g.add(cgTop);
+  const cgBot = new THREE.Mesh(new THREE.BoxGeometry(.12,.28,.085),cgMat);
+  cgBot.position.set(1.0,-.14,0);
+  g.add(cgBot);
+
+  // LUGS (4 pieces)
+  const lugPositions = [
+    [.62, .0, .88], [-.62, .0, .88], [.62, .0, -.88], [-.62, .0, -.88]
+  ];
+  lugPositions.forEach(([lx,ly,lz]) => {
+    const lug = new THREE.Mesh(new THREE.CylinderGeometry(.09,.07,.28,32),brushed);
+    lug.position.set(lx,ly,lz);
+    lug.rotation.z = Math.PI/2;
+    lug.userData.explodeOffset = new THREE.Vector3(lx>0?.5:-.5,0,lz>0?.5:-.5);
+    g.add(lug);
+    // Horizontal spring bar hole visual
+    const lCap = new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.04,32), polished);
+    lCap.rotation.z=Math.PI/2;
+    lCap.position.set(lx>0?lx+.14:lx-.14,ly,lz);
+    g.add(lCap);
+  });
+
+  // CASEBACK
+  const caseback = new THREE.Mesh(
+    new THREE.CylinderGeometry(.95,.95,.06,128),
+    brushed
+  );
+  caseback.position.y = -.17;
+  caseback.userData.explodeOffset = new THREE.Vector3(0,-.5,0);
+  g.add(caseback);
+
+  // BRACELET LINKS (simplified but convincing)
+  const braceletGroup = new THREE.Group();
+  braceletGroup.userData.explodeOffset = new THREE.Vector3(0,-.8,0);
+  const LINKS = 9;
+  for(let side=0;side<2;side++){
+    const dir = side===0?1:-1;
+    for(let l=0;l<LINKS;l++){
+      const zPos = (.90 + l * .18) * dir;
+      const row = new THREE.Group();
+      row.position.z = zPos;
+      // Center link (polished)
+      const cl = new THREE.Mesh(new THREE.BoxGeometry(.54,.15,.17),polished);
+      row.add(cl);
+      // Outer links (brushed)
+      const ol1 = new THREE.Mesh(new THREE.BoxGeometry(.22,.15,.17),brushed);
+      ol1.position.x = .38;
+      row.add(ol1);
+      const ol2 = new THREE.Mesh(new THREE.BoxGeometry(.22,.15,.17),brushed);
+      ol2.position.x = -.38;
+      row.add(ol2);
+      braceletGroup.add(row);
+    }
+    // Clasp
+    const clasp = new THREE.Mesh(new THREE.BoxGeometry(.98,.13,.20),brushed);
+    clasp.position.z = (.90 + LINKS*.18 + .10) * dir;
+    braceletGroup.add(clasp);
+  }
+  g.add(braceletGroup);
+
+  // Rotate whole group so face looks toward camera (+Z)
+  g.rotation.x = -Math.PI / 2;
+
+  return g;
+}
+
+function createEnvMap(renderer){
+  const pmremGen = new THREE.PMREMGenerator(renderer);
+  pmremGen.compileEquirectangularShader();
+  // Simple room-like environment
+  const envScene = new THREE.Scene();
+  const envLight1 = new THREE.DirectionalLight(0xffffff, 2);
+  envLight1.position.set(3,5,3);
+  envScene.add(envLight1);
+  const rt = pmremGen.fromScene(new THREE.RoomEnvironment());
+  pmremGen.dispose();
+  return rt.texture;
+}
+
+function initThreeJS(){
+  if(threeInitialized) return;
+  threeInitialized = true;
+
+  // --- REVEAL SCENE ---
+  const revCanvas = document.getElementById('reveal-canvas');
+  watchRenderer = new THREE.WebGLRenderer({ canvas: revCanvas, antialias: true, alpha: true });
+  watchRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  watchRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  watchRenderer.toneMappingExposure = 1.3;
+  watchRenderer.outputColorSpace = THREE.SRGBColorSpace;
+  watchScene = new THREE.Scene();
+  watchCamera = new THREE.PerspectiveCamera(38, 1, .01, 100);
+  watchCamera.position.set(0, 0, 7);
+  watchScene.add(watchCamera);
+
+  const env = createEnvMap(watchRenderer);
+  watchScene.environment = env;
+  watchScene.background = new THREE.Color(0x000000);
+
+  // Lights
+  const spot1 = new THREE.SpotLight(0xffffff, 8, 20, Math.PI*.2, .5, 1.5);
+  spot1.position.set(2, 6, 4);
+  watchScene.add(spot1);
+  const spot2 = new THREE.SpotLight(0xFFEEDD, 3, 20, Math.PI*.25, .8, 2);
+  spot2.position.set(-4, 2, 3);
+  watchScene.add(spot2);
+  const fill = new THREE.HemisphereLight(0x334455, 0x000000, .4);
+  watchScene.add(fill);
+  const rimLight = new THREE.DirectionalLight(0xCCDDFF, 1.2);
+  rimLight.position.set(-2,-2,-4);
+  watchScene.add(rimLight);
+
+  const mats = makeMaterials('steel');
+  watchGroup = buildWatchGroup(mats);
+  watchScene.add(watchGroup);
+
+  // --- CONFIG SCENE ---
+  const cfCanvas = document.getElementById('config-canvas');
+  configRenderer = new THREE.WebGLRenderer({ canvas: cfCanvas, antialias: true, alpha: true });
+  configRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  configRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  configRenderer.toneMappingExposure = 1.4;
+  configRenderer.outputColorSpace = THREE.SRGBColorSpace;
+  configScene = new THREE.Scene();
+  configCamera = new THREE.PerspectiveCamera(38, 1, .01, 100);
+  configCamera.position.set(0, 0, 6.5);
+  configScene.environment = env;
+  configScene.background = new THREE.Color(0x000000);
+
+  const spot3 = new THREE.SpotLight(0xffffff, 8, 20, Math.PI*.2, .5, 1.5);
+  spot3.position.set(2, 5, 4);
+  configScene.add(spot3);
+  const spot4 = new THREE.SpotLight(0xFFEECC, 3, 20, Math.PI*.3, .8, 2);
+  spot4.position.set(-4, 2, 3);
+  configScene.add(spot4);
+  configScene.add(new THREE.HemisphereLight(0x334455, 0x000000, .4));
+  const rl2 = new THREE.DirectionalLight(0xCCDDFF, 1.0);
+  rl2.position.set(-2,-2,-4);
+  configScene.add(rl2);
+
+  configWatchGroup = buildWatchGroup(makeMaterials('steel'));
+  configScene.add(configWatchGroup);
+
+  configControls = new OrbitControls(configCamera, cfCanvas);
+  configControls.enableDamping = true;
+  configControls.dampingFactor = .06;
+  configControls.autoRotate = true;
+  configControls.autoRotateSpeed = .6;
+  configControls.enableZoom = true;
+  configControls.minDistance = 3;
+  configControls.maxDistance = 10;
+
+  // --- CASEBACK SCENE ---
+  const cbCanvas = document.getElementById('caseback-canvas');
+  casebackRenderer = new THREE.WebGLRenderer({ canvas: cbCanvas, antialias: true, alpha: true });
+  casebackRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  casebackRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  casebackRenderer.toneMappingExposure = 1.2;
+  casebackRenderer.outputColorSpace = THREE.SRGBColorSpace;
+  casebackScene = new THREE.Scene();
+  casebackCamera = new THREE.PerspectiveCamera(38, 1, .01, 100);
+  casebackCamera.position.set(0, 0, 5.5);
+  casebackScene.environment = env;
+  casebackScene.background = new THREE.Color(0x000000);
+  const cbSpot = new THREE.SpotLight(0xffffff,6,20,Math.PI*.2,.5,1.5);
+  cbSpot.position.set(1,4,3);
+  casebackScene.add(cbSpot);
+  casebackScene.add(new THREE.HemisphereLight(0x334455,0x000000,.4));
+
+  // Build caseback view (back of watch)
+  const cbGroup = buildWatchGroup(makeMaterials('steel'));
+  cbGroup.rotation.x = Math.PI/2; // flip to show back
+  cbGroup.rotation.z = Math.PI;
+  casebackScene.add(cbGroup);
+
+  // Add animated rotor in caseback view
+  const rotorMesh = new THREE.Group();
+  // Half disc (18k gold)
+  const rotorGeom = new THREE.CylinderGeometry(.7,.7,.04,128,1,false,0,Math.PI);
+  const rotorMat = new THREE.MeshStandardMaterial({ color:0xC9A030, metalness:.92, roughness:.10, envMapIntensity:2 });
+  const rotorDisc = new THREE.Mesh(rotorGeom, rotorMat);
+  rotorMesh.add(rotorDisc);
+  // Hub
+  const rotorHub = new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.05,32), new THREE.MeshStandardMaterial({color:0x888480,metalness:.9,roughness:.2}));
+  rotorHub.position.y=.01;
+  rotorMesh.add(rotorHub);
+  rotorMesh.position.set(0,.01,0);
+  cbGroup.position.y=.08;
+  casebackScene.add(rotorMesh);
+
+  resizeRenderers();
+  window.addEventListener('resize', resizeRenderers);
+
+  // Render loop
+  function renderAll(){
+    requestAnimationFrame(renderAll);
+    rotorAngle += .008;
+    rotorMesh.rotation.y = rotorAngle;
+
+    // Apply explode
+    if(targetExplode !== explodeProgress){
+      explodeProgress += (targetExplode - explodeProgress) * .06;
+    }
+
+    // Reveal watch: camera pulls back + rotation
+    if(watchGroup){
+      watchGroup.rotation.z = revealProgress * Math.PI * 2 + performance.now() * .0001;
+      const camDist = 12 - revealProgress * 6.5;
+      watchCamera.position.set(
+        Math.sin(performance.now()*.00015)*1.5,
+        Math.cos(performance.now()*.0001)*0.8,
+        camDist
+      );
+      watchCamera.lookAt(0,0,0);
+    }
+
+    // Config watch explode
+    if(configWatchGroup){
+      configWatchGroup.traverse(child => {
+        if(child.userData.explodeOffset){
+          const off = child.userData.explodeOffset;
+          child.position.x = off.x * explodeProgress;
+          child.position.y = off.y * explodeProgress;
+          child.position.z = off.z * explodeProgress;
+        }
+      });
+    }
+
+    configControls.update();
+    watchRenderer.render(watchScene, watchCamera);
+    configRenderer.render(configScene, configCamera);
+    casebackRenderer.render(casebackScene, casebackCamera);
+  }
+  renderAll();
+}
+
+function resizeRenderers(){
+  const setSize = (renderer, camera, container) => {
+    if(!renderer || !container) return;
+    const w = container.clientWidth, h = container.clientHeight;
+    if(w===0||h===0) return;
+    renderer.setSize(w,h,false);
+    camera.aspect = w/h;
+    camera.updateProjectionMatrix();
+  };
+  const revContainer = document.getElementById('reveal-sticky');
+  setSize(watchRenderer, watchCamera, revContainer);
+  const cfContainer = document.getElementById('config-three-wrap');
+  setSize(configRenderer, configCamera, cfContainer);
+  const cbContainer = document.querySelector('.cb-canvas-wrap');
+  setSize(casebackRenderer, casebackCamera, cbContainer);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CTA CANVAS
+// ──────────────────────────────────────────────────────────────────────────────
+const ctaCanvas = document.getElementById('cta-canvas');
+const ctaCtx = ctaCanvas.getContext('2d');
+let ctaW, ctaH, ctaT=0;
+function resizeCta(){
+  ctaW=ctaCanvas.width=ctaCanvas.offsetWidth;
+  ctaH=ctaCanvas.height=ctaCanvas.offsetHeight;
+}
+window.addEventListener('resize', resizeCta);
+function drawCta(){
+  ctaT++;
+  ctaCtx.clearRect(0,0,ctaW,ctaH);
+  const cx=ctaW/2,cy=ctaH/2;
+  for(let r=0;r<3;r++){
+    const rad = Math.min(ctaW,ctaH)*(0.25+r*.18) + Math.sin(ctaT*.012+r)*6;
+    const alpha = .04 - r*.008;
+    ctaCtx.beginPath();
+    ctaCtx.arc(cx,cy,rad,0,Math.PI*2);
+    ctaCtx.strokeStyle=`rgba(238,233,224,${alpha})`;
+    ctaCtx.lineWidth=.8;
+    ctaCtx.stroke();
+  }
+  requestAnimationFrame(drawCta);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SCROLL ANIMATIONS
+// ──────────────────────────────────────────────────────────────────────────────
+function initScrollAnimations(){
+  // Animate movement canvas
+  let movRAF = null;
+  ScrollTrigger.create({
+    trigger:'#movement-wrap',
+    start:'top top',
+    end:'bottom bottom',
+    scrub: true,
+    onUpdate: self => {
+      movProgress = self.progress;
+      if(!movRAF){ movRAF = requestAnimationFrame(function loop(){ drawMovement(movProgress); movRAF = null; }); }
+    }
+  });
+
+  // Caption updates for movement
+  const captions = [
+    {p:0,    label:'The Heart',        title:'Calibre 3235',       spec:'28,800 vph · 31 Jewels · 70-hour power reserve'},
+    {p:.18,  label:'The Power Source', title:'Barrel & Mainspring', spec:'Approximately 70 hours of stored energy'},
+    {p:.28,  label:'The Gear Train',   title:'Four Wheels',         spec:'Transmitting power from barrel to escapement'},
+    {p:.38,  label:'The Regulator',    title:'Swiss Lever Escapement', spec:'Dividing time into equal, precise increments'},
+    {p:.48,  label:'The Heart',        title:'Balance Wheel',       spec:'Oscillating 8 times per second · 28,800 vph'},
+    {p:.58,  label:'The Architecture', title:'Bridges & Plates',    spec:'Côtes de Genève finishing · Mirror-polished bevels'},
+    {p:.68,  label:'The Perpetual',    title:'18k Gold Rotor',      spec:'Bidirectional winding · Never requires hand winding'},
+    {p:.80,  label:'Complete',         title:'Calibre 3235',        spec:'Accuracy: −2 / +2 seconds per day after casing'},
+  ];
+  ScrollTrigger.create({
+    trigger:'#movement-wrap',
+    start:'top top',
+    end:'bottom bottom',
+    scrub:true,
+    onUpdate: self => {
+      const p = self.progress;
+      let best = captions[0];
+      captions.forEach(c => { if(p >= c.p) best = c; });
+      document.getElementById('mov-label').textContent = best.label;
+      document.getElementById('mov-title').textContent = best.title;
+      document.getElementById('mov-spec').textContent = best.spec;
+    }
+  });
+
+  // Dial section
+  let dialRAF = null;
+  ScrollTrigger.create({
+    trigger:'#dial-wrap',
+    start:'top top',
+    end:'bottom bottom',
+    scrub:true,
+    onUpdate: self => {
+      dialProgress = self.progress;
+      if(!dialRAF){ dialRAF=requestAnimationFrame(function loop(){ drawDial(dialProgress); dialRAF=null; }); }
+    }
+  });
+  const dialCaptions=[
+    {p:0,   label:'The Dial',     title:'Infinite Black',      spec:'Applied white gold indices · Chromalight luminescence'},
+    {p:.3,  label:'The Indices',  title:'White Gold Markers',  spec:'Each raised 0.5mm above the dial surface'},
+    {p:.6,  label:'The Hands',    title:'Mercedes & Sword',    spec:'Filled with long-lasting Chromalight material'},
+    {p:.85, label:'The Dial',     title:'A Complete Universe', spec:'Sapphire crystal · 2.5× Cyclops magnifier'},
+  ];
+  ScrollTrigger.create({
+    trigger:'#dial-wrap',
+    start:'top top',
+    end:'bottom bottom',
+    scrub:true,
+    onUpdate: self=>{
+      let best=dialCaptions[0];
+      dialCaptions.forEach(c=>{if(self.progress>=c.p) best=c;});
+      document.getElementById('dial-label').textContent=best.label;
+      document.getElementById('dial-title').textContent=best.title;
+      document.getElementById('dial-spec').textContent=best.spec;
+    }
+  });
+
+  // Reveal section
+  ScrollTrigger.create({
+    trigger:'#reveal-wrap',
+    start:'top top',
+    end:'bottom bottom',
+    scrub:true,
+    onUpdate: self => {
+      revealProgress = self.progress;
+      if(!threeInitialized && self.progress > .05) initThreeJS();
+      gsap.to('#reveal-hud', { opacity: Math.min(1, (self.progress - .4) * 3), duration:.05 });
+    },
+    onEnter: () => { if(!threeInitialized) initThreeJS(); }
+  });
+
+  // Interlude sections fade in
+  gsap.utils.toArray('.interlude, .spec-cell, .cb-text, .cta-eyebrow, .cta-headline, .cta-sub, .cta-btns').forEach(el => {
+    gsap.from(el, {
+      opacity:0, y:28, duration:1, ease:'power2.out',
+      scrollTrigger:{ trigger:el, start:'top 82%', toggleActions:'play none none none' }
+    });
+  });
+
+  // Config section
+  gsap.from('.config-right > *', {
+    opacity:0, x:30, duration:.8, ease:'power2.out', stagger:.1,
+    scrollTrigger:{ trigger:'#configurator', start:'top 70%', toggleActions:'play none none none' }
+  });
+
+  // CTA animations
+  ScrollTrigger.create({
+    trigger:'#cta',
+    start:'top 80%',
+    onEnter:()=>{
+      resizeCta();
+      drawCta();
+      gsap.to('.cta-eyebrow',{opacity:1,y:0,duration:.8,delay:.1});
+      gsap.to('.cta-headline',{opacity:1,y:0,duration:.9,delay:.25});
+      gsap.to('.cta-sub',{opacity:1,duration:.7,delay:.45});
+      gsap.to('.cta-btns',{opacity:1,duration:.7,delay:.6});
+    }
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CONFIGURATOR INTERACTIONS
+// ──────────────────────────────────────────────────────────────────────────────
+function rebuildConfigWatch(){
+  if(!configScene||!configWatchGroup) return;
+  configScene.remove(configWatchGroup);
+  const mats = makeMaterials(currentMat);
+  configWatchGroup = buildWatchGroup(mats);
+  configScene.add(configWatchGroup);
+  // Apply current view
+  applyView(currentView, false);
+}
+
+function applyView(view, animate=true){
+  currentView = view;
+  targetExplode = view === 'explode' ? 1 : 0;
+  if(view==='front'){
+    if(animate) gsap.to(configWatchGroup.rotation, {x:-Math.PI/2, y:0, duration:.8});
+    else { configWatchGroup.rotation.x=-Math.PI/2; configWatchGroup.rotation.y=0; }
+    configControls.autoRotate=true;
+  } else if(view==='angle'){
+    if(animate) gsap.to(configWatchGroup.rotation, {x:-Math.PI/2+.3, y:.4, duration:.8});
+    else { configWatchGroup.rotation.x=-Math.PI/2+.3; configWatchGroup.rotation.y=.4; }
+    configControls.autoRotate=true;
+  } else if(view==='back'){
+    if(animate) gsap.to(configWatchGroup.rotation, {x:Math.PI/2, y:0, duration:.8});
+    else { configWatchGroup.rotation.x=Math.PI/2; configWatchGroup.rotation.y=0; }
+    configControls.autoRotate=true;
+  } else if(view==='explode'){
+    configControls.autoRotate=false;
+  }
+}
+
+document.querySelectorAll('[data-mat]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-mat]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMat=btn.dataset.mat;
+    rebuildConfigWatch();
+  });
+});
+
+document.querySelectorAll('[data-dial]').forEach(sw=>{
+  sw.addEventListener('click',()=>{
+    document.querySelectorAll('[data-dial]').forEach(s=>s.classList.remove('active'));
+    sw.classList.add('active');
+    currentDial=sw.dataset.dial;
+    rebuildConfigWatch();
+  });
+});
+
+document.querySelectorAll('[data-view]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-view]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if(configWatchGroup) applyView(btn.dataset.view);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// INITIAL MOVEMENT CANVAS DRAW
+// ──────────────────────────────────────────────────────────────────────────────
+drawMovement(0);
+drawDial(0);
+</script>
+</body>
+</html>

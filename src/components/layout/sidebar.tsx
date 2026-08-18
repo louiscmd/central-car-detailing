@@ -20,6 +20,7 @@ import {
   MessageSquare,
   UserPlus,
   ShieldCheck,
+  RefreshCw,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
@@ -38,7 +39,7 @@ const navSections = [
     items: [
       { href: "/welcome", label: "Biz Hub", icon: Home },
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/clients", label: "Clients", icon: Users },
+      { href: "/clients", label: "Monitoring", icon: Users },
       { href: "/partners", label: "Partners", icon: UserPlus },
       { href: "/chat", label: "Chat", icon: MessageSquare },
       { href: "/tasks", label: "Daily Checklist", icon: CheckSquare },
@@ -70,6 +71,8 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [updateWaiting, setUpdateWaiting] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     const standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -84,6 +87,52 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+
+    let reg: ServiceWorkerRegistration | undefined;
+
+    function checkForUpdate() {
+      reg?.update().catch(() => {});
+    }
+
+    navigator.serviceWorker.getRegistration().then((r) => {
+      if (!r) return;
+      reg = r;
+
+      if (r.waiting) setUpdateWaiting(true);
+
+      r.addEventListener("updatefound", () => {
+        const newWorker = r.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener("statechange", () => {
+          if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+            setUpdateWaiting(true);
+          }
+        });
+      });
+
+      // Check immediately, then every 60 s
+      checkForUpdate();
+      const interval = setInterval(checkForUpdate, 60_000);
+
+      // Also check when the user focuses the tab
+      const onVisible = () => { if (document.visibilityState === "visible") checkForUpdate(); };
+      document.addEventListener("visibilitychange", onVisible);
+
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener("visibilitychange", onVisible);
+      };
+    });
+
+    // When the new SW takes over, reload
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!refreshing) { refreshing = true; window.location.reload(); }
+    });
+  }, []);
+
   async function handleInstall() {
     if (!deferredPrompt) {
       window.open("https://support.google.com/chrome/answer/9658361", "_blank");
@@ -91,6 +140,16 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
     }
     await deferredPrompt.prompt();
     setDeferredPrompt(null);
+  }
+
+  async function handleUpdate() {
+    setUpdating(true);
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg?.waiting) {
+      reg.waiting.postMessage({ type: "SKIP_WAITING" });
+    } else {
+      window.location.reload();
+    }
   }
 
   return (
@@ -174,6 +233,16 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
 
         {/* Footer */}
         <div className="p-4 border-t border-border space-y-2">
+          {updateWaiting && (
+            <button
+              onClick={() => void handleUpdate()}
+              disabled={updating}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            >
+              <RefreshCw className={cn("w-4 h-4 shrink-0", updating && "animate-spin")} />
+              {updating ? "Updating…" : "Update available"}
+            </button>
+          )}
           {!isInstalled && (
             <button
               onClick={handleInstall}
@@ -184,7 +253,7 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
             </button>
           )}
           <p className="text-xs text-muted-foreground text-center">
-            SocialPulse v0.1
+            SocialPulse v0.9
           </p>
         </div>
       </aside>

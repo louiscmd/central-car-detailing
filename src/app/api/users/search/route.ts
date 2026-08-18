@@ -9,12 +9,14 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q")?.trim().toLowerCase().replace(/^@/, "");
   if (!q || q.length < 2) return NextResponse.json([]);
+  const managerOnly = searchParams.get("managerOnly") === "true";
 
   const users = await prisma.user.findMany({
     where: {
       AND: [
         { id: { not: session.user.id } },
-        { role: { not: "CLIENT" } },
+        { isDummy: false },
+        ...(managerOnly ? [{ role: { in: ["USER" as const, "ADMIN" as const] } }] : []),
         {
           OR: [
             { username: { contains: q, mode: "insensitive" } },

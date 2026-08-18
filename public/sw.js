@@ -1,7 +1,19 @@
-self.addEventListener('install', () => self.skipWaiting());
+// SocialPulse v0.9
+const VERSION = '0.9';
+
+self.addEventListener('install', () => {
+  // Don't skipWaiting — let the user trigger the update via the Update button
+});
+
 self.addEventListener('activate', () => self.clients.claim());
+
 self.addEventListener('fetch', (event) => {
   event.respondWith(fetch(event.request));
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data?.type === 'GET_VERSION') event.source?.postMessage({ type: 'VERSION', version: VERSION });
 });
 
 self.addEventListener('push', (event) => {

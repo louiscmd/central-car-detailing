@@ -1,4 +1,4 @@
-import { auth, signOut } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -8,5 +8,6 @@ export async function DELETE() {
 
   await prisma.user.delete({ where: { id: session.user.id } });
 
+  // Clear the session cookie by telling the client to call signOut
   return NextResponse.json({ ok: true });
 }

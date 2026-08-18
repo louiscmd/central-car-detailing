@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Native Station — English School with Native Speakers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #080808;
+      --black-mid: #111111;
+      --black-card: #161616;
+      --red: #d42b2b;
+      --red-bright: #ff3b3b;
+      --red-muted: rgba(212,43,43,0.15);
+      --red-border: rgba(212,43,43,0.3);
+      --white: #ffffff;
+      --text-muted: #6a6a6a;
+      --border: rgba(255,255,255,0.07);
+      --card-bg: rgba(255,255,255,0.03);
+      --radius: 16px;
+      --transition: 0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--black);
+      color: var(--white);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 60px;
+      transition: background var(--transition), backdrop-filter var(--transition);
+    }
+    nav.scrolled {
+      background: rgba(8,8,8,0.94);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { font-size: 17px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--white); text-decoration: none; }
+    .nav-logo span { color: var(--red); }
+    .nav-links { display: flex; gap: 36px; list-style: none; }
+    .nav-links a { color: rgba(255,255,255,0.55); text-decoration: none; font-size: 13px; font-weight: 500; letter-spacing: 0.04em; transition: color var(--transition); }
+    .nav-links a:hover { color: var(--white); }
+    .nav-cta { background: var(--red) !important; color: var(--white) !important; padding: 10px 24px; border-radius: 100px; font-weight: 700 !important; }
+    .nav-cta:hover { background: var(--red-bright) !important; }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: grid; grid-template-columns: 1fr 1fr;
+      align-items: center; gap: 60px;
+      padding: 120px 60px 80px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -300px; right: -200px;
+      width: 700px; height: 700px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(212,43,43,0.09) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-text { position: relative; z-index: 2; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--red-muted); border: 1px solid var(--red-border);
+      color: #ff8080; padding: 6px 16px; border-radius: 100px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 32px;
+    }
+    .hero-badge::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--red);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+    h1 { font-family: 'Playfair Display', serif; font-size: clamp(44px,4.5vw,72px); line-height: 1.08; font-weight: 800; margin-bottom: 24px; }
+    h1 em { font-style: italic; color: var(--red); }
+    .hero-sub { font-size: 17px; line-height: 1.75; color: rgba(255,255,255,0.5); max-width: 460px; margin-bottom: 44px; }
+    .hero-actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--red); color: var(--white); padding: 15px 32px; border-radius: 100px;
+      font-weight: 700; font-size: 14px; text-decoration: none; transition: all var(--transition);
+    }
+    .btn-primary:hover { background: var(--red-bright); transform: translateY(-2px); box-shadow: 0 16px 40px rgba(212,43,43,0.35); }
+    .btn-ghost { display: inline-flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.55); font-size: 14px; font-weight: 500; text-decoration: none; transition: color var(--transition); }
+    .btn-ghost:hover { color: var(--white); }
+    .btn-ghost .play-icon { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; transition: border-color var(--transition); }
+    .btn-ghost:hover .play-icon { border-color: rgba(255,255,255,0.4); }
+    .hero-stats { display: flex; gap: 40px; margin-top: 56px; padding-top: 56px; border-top: 1px solid var(--border); }
+    .stat-num { font-size: 34px; font-weight: 900; line-height: 1; }
+    .stat-num span { color: var(--red); }
+    .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 6px; font-weight: 500; }
+
+    /* LEVEL TEST PANEL */
+    .test-panel {
+      position: relative; z-index: 2;
+      background: var(--black-card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px; overflow: hidden;
+    }
+    .test-header {
+      background: var(--red); padding: 22px 28px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .test-header-icon { font-size: 22px; }
+    .test-header h3 { font-size: 16px; font-weight: 800; }
+    .test-header p { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+    .test-body { padding: 28px; }
+
+    .test-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .progress-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.07); border-radius: 100px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--red); border-radius: 100px; transition: width 0.4s ease; }
+    .progress-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; font-weight: 600; }
+
+    .question-text { font-size: 15px; font-weight: 600; line-height: 1.55; margin-bottom: 16px; }
+    .options-list { display: flex; flex-direction: column; gap: 9px; }
+    .option-btn {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px; padding: 11px 16px;
+      color: rgba(255,255,255,0.7); font-family: 'Inter',sans-serif; font-size: 13px; font-weight: 500;
+      cursor: pointer; text-align: left; transition: all var(--transition);
+    }
+    .option-btn:hover { background: var(--red-muted); border-color: var(--red-border); color: var(--white); }
+    .option-btn.selected { background: var(--red-muted); border-color: var(--red); color: var(--white); }
+    .option-btn.correct { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.45); color: #4ade80; }
+    .option-btn.wrong { background: rgba(212,43,43,0.15); border-color: var(--red); color: #ff8080; }
+    .option-btn:disabled { cursor: default; }
+
+    .test-nav { display: flex; justify-content: flex-end; margin-top: 20px; }
+    .test-next-btn {
+      background: var(--red); color: var(--white); border: none;
+      padding: 10px 24px; border-radius: 100px;
+      font-family: 'Inter',sans-serif; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: all var(--transition); display: none;
+    }
+    .test-next-btn:hover { background: var(--red-bright); }
+    .test-next-btn.visible { display: block; }
+
+    /* Intro */
+    .test-intro { text-align: center; }
+    .test-intro p { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.75; margin-bottom: 18px; }
+    .test-intro ul { text-align: left; list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+    .test-intro ul li { font-size: 12px; color: rgba(255,255,255,0.55); display: flex; align-items: center; gap: 8px; }
+    .test-intro ul li::before { content: '✓'; color: var(--red); font-weight: 800; }
+    .start-test-btn {
+      background: var(--red); color: var(--white); border: none;
+      padding: 14px 32px; border-radius: 100px;
+      font-family: 'Inter',sans-serif; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all var(--transition); width: 100%;
+    }
+    .start-test-btn:hover { background: var(--red-bright); transform: translateY(-1px); }
+
+    /* Result */
+    .test-result { display: none; }
+    .test-result.active { display: block; }
+    .result-level { text-align: center; padding: 16px 0 22px; }
+    .level-badge { display: inline-block; background: var(--red); color: var(--white); font-size: 20px; font-weight: 900; padding: 9px 26px; border-radius: 100px; margin-bottom: 10px; }
+    .result-level p { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.65; }
+    .result-form { display: flex; flex-direction: column; gap: 9px; }
+    .result-form input {
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; padding: 11px 16px;
+      color: var(--white); font-family: 'Inter',sans-serif; font-size: 13px;
+      outline: none; transition: border-color var(--transition); width: 100%;
+    }
+    .result-form input::placeholder { color: rgba(255,255,255,0.25); }
+    .result-form input:focus { border-color: var(--red-border); }
+    .result-submit {
+      background: var(--red); color: var(--white); border: none;
+      padding: 12px; border-radius: 10px;
+      font-family: 'Inter',sans-serif; font-size: 13px; font-weight: 700;
+      cursor: pointer; width: 100%; transition: all var(--transition);
+    }
+    .result-submit:hover { background: var(--red-bright); }
+
+    /* MARQUEE */
+    .marquee-wrap { background: var(--red); padding: 16px 0; overflow: hidden; }
+    .marquee-track { display: flex; gap: 60px; animation: marquee 30s linear infinite; white-space: nowrap; }
+    .marquee-item { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.85); display: flex; align-items: center; gap: 24px; flex-shrink: 0; }
+    .marquee-dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.35); }
+    @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+    /* SECTIONS */
+    section { padding: 100px 60px; }
+    .section-label { display: inline-flex; align-items: center; gap: 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--red); margin-bottom: 20px; }
+    .section-label::before { content: ''; width: 28px; height: 2px; background: var(--red); }
+    h2 { font-family: 'Playfair Display',serif; font-size: clamp(34px,3.5vw,52px); font-weight: 800; line-height: 1.15; margin-bottom: 20px; }
+    h2 em { font-style: italic; color: var(--red); }
+    .section-intro { font-size: 16px; color: rgba(255,255,255,0.48); line-height: 1.75; max-width: 540px; }
+
+    /* COURSES */
+    .courses-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-top: 56px; }
+    .course-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px 28px; transition: all var(--transition); position: relative; overflow: hidden; }
+    .course-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--red); transform: scaleX(0); transition: transform var(--transition); }
+    .course-card:hover { background: rgba(255,255,255,0.05); transform: translateY(-4px); border-color: rgba(255,255,255,0.1); }
+    .course-card:hover::before { transform: scaleX(1); }
+    .course-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--red-muted); display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 20px; }
+    .course-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; line-height: 1.3; }
+    .course-card p { font-size: 13px; color: rgba(255,255,255,0.48); line-height: 1.7; margin-bottom: 20px; }
+    .course-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { background: var(--red-muted); border: 1px solid var(--red-border); color: #ff8080; padding: 3px 11px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+
+    /* ABOUT */
+    .about-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+    .about-features { display: flex; flex-direction: column; gap: 22px; margin-top: 36px; }
+    .feature-row { display: flex; gap: 18px; align-items: flex-start; }
+    .feature-icon { width: 42px; height: 42px; border-radius: 11px; background: var(--red-muted); border: 1px solid var(--red-border); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+    .feature-row h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .feature-row p { font-size: 13px; color: rgba(255,255,255,0.48); line-height: 1.65; }
+    .about-visual { position: relative; }
+    .about-portrait { width: 100%; border-radius: 24px; background: linear-gradient(160deg,#1a0808,#0d0505); border: 1px solid rgba(212,43,43,0.12); aspect-ratio: 4/5; display: flex; align-items: center; justify-content: center; font-size: 80px; position: relative; overflow: hidden; }
+    .about-portrait::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(8,8,8,0.85) 0%, transparent 60%); }
+    .portrait-text { position: absolute; bottom: 28px; left: 28px; z-index: 2; }
+    .portrait-text h3 { font-size: 20px; font-weight: 700; }
+    .portrait-text p { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 3px; }
+    .cert-badges { position: absolute; top: -14px; right: -14px; display: flex; flex-direction: column; gap: 8px; }
+    .cert-badge { background: var(--red); color: var(--white); padding: 7px 16px; border-radius: 100px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; box-shadow: 0 8px 24px rgba(212,43,43,0.4); }
+
+    /* TESTIMONIALS */
+    .testimonials { background: rgba(255,255,255,0.012); }
+    .testimonials-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 56px; flex-wrap: wrap; gap: 20px; }
+    .testimonials-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+    .testi-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px 28px; transition: all var(--transition); }
+    .testi-card:hover { background: rgba(255,255,255,0.05); transform: translateY(-4px); }
+    .stars { display: flex; gap: 3px; margin-bottom: 18px; }
+    .star { color: var(--red); font-size: 15px; }
+    .testi-quote { font-size: 14px; line-height: 1.75; color: rgba(255,255,255,0.62); margin-bottom: 24px; font-style: italic; }
+    .testi-author { display: flex; align-items: center; gap: 12px; }
+    .author-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; flex-shrink: 0; }
+    .author-name { font-weight: 700; font-size: 14px; }
+    .author-role { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* CONTACT */
+    .contact-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+    .contact-detail { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 24px; }
+    .contact-icon { width: 42px; height: 42px; border-radius: 11px; background: var(--red-muted); border: 1px solid var(--red-border); display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+    .contact-detail h4 { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 3px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .contact-detail p { font-size: 15px; font-weight: 600; }
+    form { display: flex; flex-direction: column; gap: 14px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    input, select, textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 13px 16px; color: var(--white); font-family: 'Inter',sans-serif; font-size: 14px; outline: none; transition: border-color var(--transition),background var(--transition); resize: none; }
+    input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.22); }
+    input:focus, select:focus, textarea:focus { border-color: rgba(212,43,43,0.4); background: rgba(255,255,255,0.06); }
+    select option { background: #1a1a1a; }
+    textarea { min-height: 110px; }
+    .form-submit { background: var(--red); color: var(--white); border: none; padding: 15px 34px; border-radius: 100px; font-family: 'Inter',sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: all var(--transition); align-self: flex-start; }
+    .form-submit:hover { background: var(--red-bright); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(212,43,43,0.35); }
+
+    /* FOOTER */
+    footer { padding: 52px 60px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+    .footer-logo { font-size: 17px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; color: var(--white); }
+    .footer-logo span { color: var(--red); }
+    .footer-links { display: flex; gap: 28px; list-style: none; }
+    .footer-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; transition: color var(--transition); }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy { font-size: 12px; color: var(--text-muted); }
+
+    /* REVEAL */
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* RESPONSIVE */
+    @media (max-width: 1100px) {
+      nav { padding: 20px 32px; }
+      .hero { grid-template-columns: 1fr; padding: 120px 32px 80px; }
+      .test-panel { max-width: 520px; }
+      section { padding: 80px 32px; }
+      .courses-grid { grid-template-columns: 1fr 1fr; }
+      .about-inner { grid-template-columns: 1fr; }
+      .about-visual { display: none; }
+      .testimonials-grid { grid-template-columns: 1fr; max-width: 500px; }
+      .contact-inner { grid-template-columns: 1fr; }
+      footer { padding: 40px 32px; }
+    }
+    @media (max-width: 640px) {
+      nav { padding: 16px 20px; }
+      .nav-links { display: none; }
+      .hero { padding: 100px 20px 60px; }
+      section { padding: 60px 20px; }
+      .courses-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+      .hero-stats { flex-wrap: wrap; gap: 24px; }
+      footer { padding: 32px 20px; flex-direction: column; align-items: flex-start; }
+      .footer-links { flex-wrap: wrap; gap: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="#" class="nav-logo">The Native<span>.</span></a>
+  <ul class="nav-links">
+    <li><a href="#level-test">Level Test</a></li>
+    <li><a href="#courses">Courses</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#testimonials">Reviews</a></li>
+    <li><a href="#contact" class="nav-cta">Enrol Now</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-text reveal">
+    <div class="hero-badge">Mokotów, Warsaw · Est. 2006</div>
+    <h1>English fluency,<br /><em>finally.</em></h1>
+    <p class="hero-sub">Taught exclusively by native English speakers with 18+ years of experience helping professionals and companies communicate at the highest level.</p>
+    <div class="hero-actions">
+      <a href="#contact" class="btn-primary">
+        Book a Free Lesson
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="#level-test" class="btn-ghost">
+        <span class="play-icon">
+          <svg width="10" height="12" viewBox="0 0 12 14" fill="currentColor"><path d="M1 1l10 6-10 6V1z"/></svg>
+        </span>
+        Take level test
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div><div class="stat-num">18<span>+</span></div><div class="stat-label">Years of experience</div></div>
+      <div><div class="stat-num">500<span>+</span></div><div class="stat-label">Students trained</div></div>
+      <div><div class="stat-num">100<span>%</span></div><div class="stat-label">Native speakers</div></div>
+    </div>
+  </div>
+
+  <!-- LEVEL TEST PANEL -->
+  <div class="test-panel reveal" id="level-test">
+    <div class="test-header">
+      <div class="test-header-icon">📝</div>
+      <div>
+        <h3>Free Level Assessment</h3>
+        <p>Find your English level in 5 minutes</p>
+      </div>
+    </div>
+    <div class="test-body">
+      <div class="test-progress" id="test-progress" style="display:none;">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+        <span class="progress-label" id="progress-label">1 / 12</span>
+      </div>
+
+      <!-- Intro -->
+      <div class="test-intro" id="test-intro">
+        <p>Answer 12 short questions to find your level — from Beginner to Advanced. Results go straight to our team so we can recommend the perfect course.</p>
+        <ul>
+          <li>12 multiple-choice questions</li>
+          <li>Grammar, vocabulary &amp; comprehension</li>
+          <li>Instant result — no waiting</li>
+          <li>Free, no obligation</li>
+        </ul>
+        <button class="start-test-btn" onclick="startTest()">Start the Test →</button>
+      </div>
+
+      <!-- Questions -->
+      <div id="question-container"></div>
+      <div class="test-nav"><button class="test-next-btn" id="next-btn" onclick="nextQuestion()">Next →</button></div>
+
+      <!-- Result -->
+      <div class="test-result" id="test-result">
+        <div class="result-level">
+          <div class="level-badge" id="result-level-text">Intermediate</div>
+          <p id="result-description" style="margin-top:10px;padding:0 8px;">Great foundation — our Business English programme is perfect for you.</p>
+        </div>
+        <form class="result-form" id="result-form" onsubmit="submitResult(event)">
+          <input type="text" id="res-name" placeholder="Your full name" required />
+          <input type="email" id="res-email" placeholder="Your email address" required />
+          <input type="tel" id="res-phone" placeholder="Phone number (optional)" />
+          <input type="hidden" id="res-level" />
+          <input type="hidden" id="res-score" />
+          <button type="submit" class="result-submit">Send results &amp; get a recommendation →</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+  <div class="marquee-track">
+    <div class="marquee-item">Business English <span class="marquee-dot"></span></div>
+    <div class="marquee-item">IELTS Preparation <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Corporate Training <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Conversation Classes <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Specialist English <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Children's Courses <span class="marquee-dot"></span></div>
+    <div class="marquee-item">BEC Exams <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Native Speakers Only <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Business English <span class="marquee-dot"></span></div>
+    <div class="marquee-item">IELTS Preparation <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Corporate Training <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Conversation Classes <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Specialist English <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Children's Courses <span class="marquee-dot"></span></div>
+    <div class="marquee-item">BEC Exams <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Native Speakers Only <span class="marquee-dot"></span></div>
+  </div>
+</div>
+
+<!-- COURSES -->
+<section id="courses">
+  <div class="reveal">
+    <div class="section-label">What we offer</div>
+    <h2>Courses built for<br /><em>real results</em></h2>
+    <p class="section-intro">Every programme is designed around what you actually need — whether that's a Cambridge certificate, a boardroom presentation, or your first fluent conversation.</p>
+  </div>
+  <div class="courses-grid">
+    <div class="course-card reveal">
+      <div class="course-icon">💼</div>
+      <h3>Business &amp; Corporate English</h3>
+      <p>In-company and online training tailored to your industry. Leadership, negotiations, presentations, and international business culture.</p>
+      <div class="course-tags"><span class="tag">Negotiations</span><span class="tag">Leadership</span><span class="tag">Presentations</span></div>
+    </div>
+    <div class="course-card reveal">
+      <div class="course-icon">📋</div>
+      <h3>IELTS Exam Preparation</h3>
+      <p>Comprehensive coaching across all four skills. Proven strategies, timed practice, and detailed feedback to hit your target band score.</p>
+      <div class="course-tags"><span class="tag">Listening</span><span class="tag">Reading</span><span class="tag">Writing</span><span class="tag">Speaking</span></div>
+    </div>
+    <div class="course-card reveal">
+      <div class="course-icon">🏢</div>
+      <h3>BEC Cambridge Exams</h3>
+      <p>Structured preparation for BEC Preliminary, Vantage, and Higher — the gold-standard business English qualification worldwide.</p>
+      <div class="course-tags"><span class="tag">Preliminary</span><span class="tag">Vantage</span><span class="tag">Higher</span></div>
+    </div>
+    <div class="course-card reveal">
+      <div class="course-icon">🗣️</div>
+      <h3>Conversation &amp; Fluency</h3>
+      <p>Build natural confidence with structured conversation on topics that matter to you. No more hesitation or translating in your head.</p>
+      <div class="course-tags"><span class="tag">Fluency</span><span class="tag">Confidence</span><span class="tag">Pronunciation</span></div>
+    </div>
+    <div class="course-card reveal">
+      <div class="course-icon">🔬</div>
+      <h3>Specialist English</h3>
+      <p>Targeted courses for medicine, law, engineering, aviation, sales, and finance. The vocabulary your career actually needs.</p>
+      <div class="course-tags"><span class="tag">Medicine</span><span class="tag">Law</span><span class="tag">Aviation</span><span class="tag">Finance</span></div>
+    </div>
+    <div class="course-card reveal">
+      <div class="course-icon">🎒</div>
+      <h3>English for Children</h3>
+      <p>Immersive classes using storytelling, games, and CLIL methodology. Native speakers from the very first lesson.</p>
+      <div class="course-tags"><span class="tag">TPR Method</span><span class="tag">Storytelling</span><span class="tag">CLIL</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about" style="background:rgba(255,255,255,0.012);">
+  <div class="about-inner">
+    <div>
+      <div class="reveal">
+        <div class="section-label">About us</div>
+        <h2>18 years of helping<br /><em>Warsaw communicate</em></h2>
+        <p class="section-intro">Founded by Christopher Bradbury — British educator, CELTA &amp; TEFL certified, University of Birmingham Business graduate, and published author with 16 years of ESL and business consulting experience.</p>
+      </div>
+      <div class="about-features">
+        <div class="feature-row reveal">
+          <div class="feature-icon">🎯</div>
+          <div><h4>Native speakers only</h4><p>Every teacher is a native English speaker. You hear authentic pronunciation, real idioms, and cultural nuance from lesson one.</p></div>
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-icon">📊</div>
+          <div><h4>Tailored to your goals</h4><p>We assess your level and build a curriculum that hits your specific targets in the shortest possible time.</p></div>
+        </div>
+        <div class="feature-row reveal">
+          <div class="feature-icon">🏆</div>
+          <div><h4>Published author &amp; consultant</h4><p>Christopher combines ESL expertise with business consulting — giving you language skills with real-world application.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="about-visual reveal">
+      <div class="about-portrait">
+        👨‍🏫
+        <div class="portrait-text">
+          <h3>Christopher Bradbury</h3>
+          <p>Founder · University of Birmingham</p>
+        </div>
+      </div>
+      <div class="cert-badges">
+        <div class="cert-badge">CELTA</div>
+        <div class="cert-badge">TEFL</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials" id="testimonials">
+  <div class="testimonials-header">
+    <div class="reveal">
+      <div class="section-label">Testimonials</div>
+      <h2>Loved by students<br /><em>and companies</em></h2>
+    </div>
+    <p class="section-intro reveal" style="max-width:260px;text-align:right;">Hear from professionals who transformed their English with us.</p>
+  </div>
+  <div class="testimonials-grid">
+    <div class="testi-card reveal">
+      <div class="stars">★★★★★</div>
+      <p class="testi-quote">"An exceptional experience from start to finish. Christopher's attention to detail and ability to adapt to my professional needs made every session feel completely tailored."</p>
+      <div class="testi-author"><div class="author-avatar">M</div><div><div class="author-name">Marta Kowalska</div><div class="author-role">Marketing Director, Warsaw</div></div></div>
+    </div>
+    <div class="testi-card reveal">
+      <div class="stars">★★★★★</div>
+      <p class="testi-quote">"The warm, welcoming atmosphere made me comfortable from lesson one. I passed my IELTS with a 7.5 band score. Could not recommend more highly."</p>
+      <div class="testi-author"><div class="author-avatar">P</div><div><div class="author-name">Piotr Wiśniewski</div><div class="author-role">Medical Resident, Mokotów</div></div></div>
+    </div>
+    <div class="testi-card reveal">
+      <div class="stars">★★★★★</div>
+      <p class="testi-quote">"Outstanding service. Our entire commercial team completed the corporate programme and the difference in how they handle international clients has been remarkable."</p>
+      <div class="testi-author"><div class="author-avatar">A</div><div><div class="author-name">Anna Dąbrowska</div><div class="author-role">CEO, Tech Startup</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="contact-inner">
+    <div class="reveal">
+      <div class="section-label">Get in touch</div>
+      <h2>Ready to start<br /><em>speaking better?</em></h2>
+      <p class="section-intro" style="margin-bottom:44px;">Send us a message and we'll get back to you within 24 hours to discuss the best course for your goals.</p>
+      <div class="contact-detail">
+        <div class="contact-icon">📞</div>
+        <div><h4>Phone</h4><p><a href="tel:607607920" style="color:inherit;text-decoration:none;">607 607 920</a></p></div>
+      </div>
+      <div class="contact-detail">
+        <div class="contact-icon">📍</div>
+        <div><h4>Location</h4><p>Mokotów, Warsaw, Poland</p></div>
+      </div>
+      <div class="contact-detail">
+        <div class="contact-icon">✉️</div>
+        <div><h4>Email</h4><p><a href="mailto:chris@thenativestation.com" style="color:inherit;text-decoration:none;">chris@thenativestation.com</a></p></div>
+      </div>
+    </div>
+    <div class="reveal">
+      <form action="https://formspree.io/f/chris@thenativestation.com" method="POST">
+        <div class="form-row">
+          <input type="text" name="first_name" placeholder="First name" required />
+          <input type="text" name="last_name" placeholder="Last name" required />
+        </div>
+        <input type="email" name="email" placeholder="Email address" required />
+        <input type="tel" name="phone" placeholder="Phone number (optional)" />
+        <select name="course_interest">
+          <option value="" disabled selected>I'm interested in...</option>
+          <option>Business English</option>
+          <option>IELTS Preparation</option>
+          <option>BEC Cambridge Exam</option>
+          <option>Conversation Classes</option>
+          <option>Specialist English</option>
+          <option>English for Children</option>
+          <option>Corporate Training</option>
+        </select>
+        <textarea name="message" placeholder="Tell us about your current level and goals..."></textarea>
+        <button type="submit" class="form-submit">Send Message →</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="footer-logo">The Native<span>.</span></a>
+  <ul class="footer-links">
+    <li><a href="#level-test">Level Test</a></li>
+    <li><a href="#courses">Courses</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <p class="footer-copy">© 2024 The Native Station · Mokotów, Warsaw</p>
+</footer>
+
+<script>
+  // Nav
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 40));
+
+  // Reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 70);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // ─── LEVEL TEST ───
+  const questions = [
+    { q: "Choose the correct sentence:", options: ["She don't like coffee.", "She doesn't likes coffee.", "She doesn't like coffee.", "She not like coffee."], correct: 2 },
+    { q: "Complete the sentence: 'If I _____ more time, I would travel more.'", options: ["have", "had", "would have", "will have"], correct: 1 },
+    { q: "Which word best completes: 'The new policy has had a significant _____ on productivity.'", options: ["affect", "effect", "effecting", "affecting"], correct: 1 },
+    { q: "'By the time she arrived, we _____ waiting for two hours.'", options: ["were", "had been", "have been", "would be"], correct: 1 },
+    { q: "What does 'to get the ball rolling' mean?", options: ["To play sport", "To start a process", "To slow things down", "To make a mistake"], correct: 1 },
+    { q: "'The meeting was postponed _____ a lack of attendance.'", options: ["because", "due to", "since of", "as"], correct: 1 },
+    { q: "Which sentence uses the passive voice correctly?", options: ["The report was written by the manager.", "The manager was writing the report.", "The manager has wrote the report.", "The report writes itself."], correct: 0 },
+    { q: "'Despite _____ hard, he failed the exam.'", options: ["studied", "study", "studying", "to study"], correct: 2 },
+    { q: "What is the closest meaning to 'ambiguous'?", options: ["Clear and obvious", "Open to more than one interpretation", "Impossible to understand", "Extremely difficult"], correct: 1 },
+    { q: "Choose the most natural business English phrase:", options: ["I want to know about your offer.", "Please elaborate on the terms of your proposal.", "Tell me more things about what you want.", "Can you say again the offer?"], correct: 1 },
+    { q: "Which is grammatically correct?", options: ["Neither the CEO nor the directors was informed.", "Neither the CEO nor the directors were informed.", "Neither the CEO nor the directors is informed.", "Neither the CEO or the directors was informed."], correct: 1 },
+    { q: "What does 'to cut corners' mean in a business context?", options: ["To redesign the office layout", "To take shortcuts that reduce quality", "To negotiate better pricing", "To be very precise and careful"], correct: 1 }
+  ];
+
+  const levels = [
+    { name: "Beginner (A1)", min: 0, max: 2, desc: "Let's start from the very beginning — our Beginner course is the perfect fit for you." },
+    { name: "Elementary (A2)", min: 3, max: 4, desc: "You have a basic foundation. Our Elementary course will build your confidence quickly." },
+    { name: "Pre-Intermediate (B1)", min: 5, max: 6, desc: "Good progress! Our Pre-Intermediate or Conversation course is ideal for your level." },
+    { name: "Intermediate (B2)", min: 7, max: 8, desc: "Great foundation — our Business English or IELTS preparation programme is perfect for you." },
+    { name: "Upper-Intermediate (C1)", min: 9, max: 10, desc: "Impressive! Our Advanced Business English or IELTS Higher programme is the right fit." },
+    { name: "Advanced (C2)", min: 11, max: 12, desc: "Excellent! Our specialist or professional English programme will sharpen you to near-native level." }
+  ];
+
+  let currentQ = 0, score = 0, answers = [], answered = false;
+
+  function startTest() {
+    document.getElementById('test-intro').style.display = 'none';
+    document.getElementById('test-progress').style.display = 'flex';
+    renderQuestion(0);
+  }
+
+  function renderQuestion(index) {
+    answered = false;
+    const q = questions[index];
+    updateProgress(index);
+    document.getElementById('question-container').innerHTML = `
+      <div class="question-area active">
+        <div class="question-text">Q${index + 1} of ${questions.length}. ${q.q}</div>
+        <div class="options-list">
+          ${q.options.map((opt, i) => `<button class="option-btn" onclick="selectAnswer(${index}, ${i}, this)">${opt}</button>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  function selectAnswer(qIndex, chosenIndex, btn) {
+    if (answered) return;
+    answered = true;
+    const q = questions[qIndex];
+    const allBtns = btn.closest('.options-list').querySelectorAll('.option-btn');
+    allBtns.forEach(b => b.disabled = true);
+
+    setTimeout(() => {
+      if (chosenIndex === q.correct) {
+        btn.classList.add('correct');
+        score++;
+      } else {
+        btn.classList.add('wrong');
+        allBtns[q.correct].classList.add('correct');
+      }
+      answers.push({ q: q.q, chosen: q.options[chosenIndex], correct: q.options[q.correct], isCorrect: chosenIndex === q.correct });
+
+      if (currentQ === questions.length - 1) {
+        document.getElementById('next-btn').textContent = 'See Results →';
+      }
+      document.getElementById('next-btn').classList.add('visible');
+    }, 300);
+  }
+
+  function nextQuestion() {
+    currentQ++;
+    document.getElementById('next-btn').classList.remove('visible');
+    if (currentQ < questions.length) {
+      renderQuestion(currentQ);
+    } else {
+      showResult();
+    }
+  }
+
+  function updateProgress(index) {
+    document.getElementById('progress-fill').style.width = ((index / questions.length) * 100) + '%';
+    document.getElementById('progress-label').textContent = `${index + 1} / ${questions.length}`;
+  }
+
+  function showResult() {
+    document.getElementById('question-container').innerHTML = '';
+    document.getElementById('test-progress').style.display = 'none';
+    document.getElementById('next-btn').style.display = 'none';
+
+    const level = levels.find(l => score >= l.min && score <= l.max) || levels[levels.length - 1];
+    document.getElementById('result-level-text').textContent = level.name;
+    document.getElementById('result-description').textContent = level.desc;
+    document.getElementById('res-level').value = level.name;
+    document.getElementById('res-score').value = `${score} / ${questions.length}`;
+    document.getElementById('test-result').classList.add('active');
+  }
+
+  async function submitResult(e) {
+    e.preventDefault();
+    const name = document.getElementById('res-name').value;
+    const email = document.getElementById('res-email').value;
+    const phone = document.getElementById('res-phone').value;
+    const level = document.getElementById('res-level').value;
+    const scoreVal = document.getElementById('res-score').value;
+    const btn = e.target.querySelector('.result-submit');
+
+    const breakdown = answers.map((a, i) =>
+      `Q${i+1}: ${a.q}\n  → Student answered: "${a.chosen}" ${a.isCorrect ? '✓ CORRECT' : '✗ WRONG'}\n  → Correct answer: "${a.correct}"`
+    ).join('\n\n');
+
+    btn.textContent = 'Sending...';
+    btn.disabled = true;
+
+    // Submit to Formspree
+    const formData = new FormData();
+    formData.append('_replyto', email);
+    formData.append('_subject', `[Level Test] ${level} — ${name}`);
+    formData.append('Student Name', name);
+    formData.append('Student Email', email);
+    formData.append('Phone', phone || 'Not provided');
+    formData.append('Assessed Level', level);
+    formData.append('Score', scoreVal);
+    formData.append('Answer Breakdown', breakdown);
+
+    let sent = false;
+    try {
+      const res = await fetch('https://formspree.io/f/xdkobpvr', {
+        method: 'POST', body: formData, headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) sent = true;
+    } catch {}
+
+    // Always show success UI — email fallback opens if Formspree fails
+    if (!sent) {
+      const body = `New Level Assessment%0A%0AName: ${encodeURIComponent(name)}%0AEmail: ${encodeURIComponent(email)}%0APhone: ${encodeURIComponent(phone || 'Not provided')}%0ALevel: ${encodeURIComponent(level)}%0AScore: ${encodeURIComponent(scoreVal)}%0A%0A${encodeURIComponent(breakdown)}`;
+      window.location.href = `mailto:chris@thenativestation.com?subject=${encodeURIComponent('[Level Test] ' + level + ' — ' + name)}&body=${body}`;
+    }
+
+    document.getElementById('test-result').innerHTML = `
+      <div style="text-align:center;padding:20px 0;">
+        <div style="font-size:38px;margin-bottom:14px;">✅</div>
+        <h3 style="font-size:17px;font-weight:800;margin-bottom:8px;">Results sent!</h3>
+        <p style="font-size:13px;color:rgba(255,255,255,0.48);line-height:1.7;margin-bottom:18px;">We'll be in touch within 24 hours with a personalised course recommendation.</p>
+        <div style="background:var(--red-muted);border:1px solid var(--red-border);border-radius:12px;padding:16px;">
+          <div style="font-size:11px;color:#ff8080;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">Your assessed level</div>
+          <div style="font-size:19px;font-weight:900;">${level}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px;">Score: ${scoreVal}</div>
+        </div>
+      </div>`;
+  }
+</script>
+</body>
+</html>

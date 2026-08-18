@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Time Machine — A Journey Through Human History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600&family=Inter+Tight:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/ScrollTrigger.min.js"></script>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --void: #05050f;
+  --deep: #0d0820;
+  --amber: #c8862a;
+  --amber-dim: rgba(200,134,42,0.15);
+  --ice: #4eb8ff;
+  --bone: #ede8da;
+  --bone-dim: rgba(237,232,218,0.55);
+  --bone-faint: rgba(237,232,218,0.15);
+  --era-color: #4eb8ff;
+  --era-bg: rgba(78,184,255,0.04);
+}
+
+html { scroll-behavior: auto; }
+
+body {
+  background: var(--void);
+  color: var(--bone);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 300;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* ─── Canvas layer ─── */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ─── Era atmospheric overlay ─── */
+#era-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 50% at 80% 50%, var(--era-bg), transparent);
+  transition: background 3s ease;
+}
+
+/* ─── Scroll progress bar ─── */
+#progress-line {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(to right, var(--ice), var(--amber), #ff6b6b);
+  z-index: 1000;
+  transition: width 0.05s linear;
+}
+
+/* ─── HUD ─── */
+#hud {
+  position: fixed;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  width: 130px;
+  pointer-events: none;
+}
+
+#hud-year {
+  font-family: 'Cinzel', serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--bone);
+  text-align: right;
+  line-height: 1;
+  text-shadow: 0 0 24px var(--era-color);
+  transition: text-shadow 2s ease;
+}
+
+#hud-era {
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  text-align: right;
+  margin-top: 5px;
+  line-height: 1.3;
+}
+
+#hud-track {
+  width: 1px;
+  height: 120px;
+  background: rgba(237,232,218,0.08);
+  margin: 16px 0 16px auto;
+  position: relative;
+  border-radius: 1px;
+}
+#hud-thumb {
+  position: absolute;
+  top: 0;
+  left: -1px;
+  width: 3px;
+  height: 12px;
+  background: var(--era-color);
+  border-radius: 2px;
+  transition: top 0.2s ease, background 2s ease;
+}
+
+#hud-countdown {
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  color: rgba(237,232,218,0.28);
+  text-align: right;
+  line-height: 1.6;
+}
+
+/* ─── Opening screen ─── */
+#opening {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  z-index: 10;
+  padding: 2rem;
+}
+
+.interface-frame {
+  border: 1px solid rgba(78,184,255,0.25);
+  padding: 2.5rem 3.5rem;
+  backdrop-filter: blur(8px);
+  background: rgba(78,184,255,0.03);
+  position: relative;
+  max-width: 480px;
+  animation: frame-pulse 4s ease-in-out infinite;
+}
+.interface-frame::before, .interface-frame::after {
+  content: '';
+  position: absolute;
+  width: 10px; height: 10px;
+  border-color: rgba(78,184,255,0.5);
+  border-style: solid;
+}
+.interface-frame::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+.interface-frame::after  { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
+
+@keyframes frame-pulse {
+  0%,100% { box-shadow: 0 0 30px rgba(78,184,255,0.08); }
+  50%      { box-shadow: 0 0 60px rgba(78,184,255,0.18); }
+}
+
+.hud-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(78,184,255,0.7);
+  margin-bottom: 8px;
+}
+
+.hud-date {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--bone);
+  line-height: 1;
+}
+
+.interface-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(78,184,255,0.12);
+  margin: 1.8rem 0;
+}
+
+.interface-status {
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(78,184,255,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.status-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #4eb8ff;
+  animation: blink 1.5s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.opening-tagline {
+  margin-top: 3rem;
+  font-family: 'Inter Tight', sans-serif;
+  font-style: italic;
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+  color: var(--bone-dim);
+  opacity: 0;
+  animation: fade-up 1.5s ease 2s forwards;
+}
+
+@keyframes fade-up {
+  from { opacity:0; transform: translateY(12px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.scroll-cue {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  animation: fade-up 1s ease 3.5s forwards;
+}
+.scroll-cue span {
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(237,232,218,0.3);
+}
+.scroll-arrow {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, rgba(237,232,218,0.3), transparent);
+  animation: arrow-drop 2s ease-in-out infinite;
+}
+@keyframes arrow-drop {
+  0%,100% { transform: scaleY(1); opacity: 0.5; }
+  50%      { transform: scaleY(0.6); opacity: 0.2; }
+}
+
+/* ─── Warp zone ─── */
+.warp-zone {
+  height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+}
+.warp-streaks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.warp-text-block {
+  text-align: center;
+  z-index: 2;
+}
+.warp-headline {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(2rem,6vw,5rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  opacity: 0;
+}
+.warp-sub {
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  margin-top: 1rem;
+  opacity: 0;
+}
+
+/* ─── Era sections ─── */
+.era {
+  min-height: 110vh;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+  padding: 6rem 2rem 6rem clamp(3rem, 8vw, 9rem);
+}
+
+.era-bg-number {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(6rem, 18vw, 18rem);
+  line-height: 1;
+  color: rgba(237,232,218,0.028);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+}
+
+.era-inner {
+  max-width: 640px;
+  position: relative;
+  z-index: 2;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+.era-inner.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.era-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1.2rem;
+}
+.era-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--era-color);
+  flex-shrink: 0;
+}
+.era-period-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--era-color);
+}
+
+.era-year-display {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(2.2rem, 6vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 0.6rem;
+  letter-spacing: -0.01em;
+}
+
+.era-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+  font-weight: 400;
+  color: var(--bone-dim);
+  margin-bottom: 1.8rem;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+}
+
+.era-desc {
+  font-size: clamp(0.9rem, 1.4vw, 1rem);
+  line-height: 1.85;
+  color: rgba(237,232,218,0.7);
+  max-width: 580px;
+}
+
+.era-quote {
+  font-family: 'Inter Tight', sans-serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--bone-dim);
+  border-left: 2px solid var(--era-color);
+  padding-left: 1.2rem;
+  margin: 1.8rem 0;
+  opacity: 0.8;
+}
+
+/* Fact cards */
+.era-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 2rem;
+}
+
+.fact {
+  border: 1px solid rgba(237,232,218,0.08);
+  padding: 0.9rem 1.1rem;
+  flex: 1 1 160px;
+  cursor: pointer;
+  transition: border-color 0.25s, background 0.25s, transform 0.2s;
+  background: rgba(237,232,218,0.02);
+}
+.fact:hover {
+  border-color: var(--era-color);
+  background: rgba(237,232,218,0.05);
+  transform: translateY(-2px);
+}
+.fact-icon { font-size: 1.3rem; margin-bottom: 6px; }
+.fact-key {
+  font-size: 0.56rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  margin-bottom: 3px;
+}
+.fact-val {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--bone);
+}
+
+/* Interactive reveal */
+.reveal-trigger {
+  display: inline-block;
+  margin-top: 1.2rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--era-color);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(200,134,42,0.3);
+  padding-bottom: 2px;
+  transition: border-color 0.2s;
+  user-select: none;
+}
+.reveal-trigger:hover { border-color: var(--era-color); }
+.reveal-content {
+  display: none;
+  margin-top: 1rem;
+  padding: 1rem 1.2rem;
+  background: rgba(237,232,218,0.03);
+  border-left: 2px solid var(--era-color);
+  font-size: 0.88rem;
+  line-height: 1.75;
+  color: rgba(237,232,218,0.65);
+}
+.reveal-content.open { display: block; }
+
+/* CSS scene elements */
+.scene-decoration {
+  position: absolute;
+  right: 4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* Pyramid */
+.css-pyramid {
+  width: 0; height: 0;
+  border-left: 70px solid transparent;
+  border-right: 70px solid transparent;
+  border-bottom: 120px solid rgba(210,170,60,0.35);
+  filter: drop-shadow(0 0 30px rgba(210,170,60,0.2));
+  position: relative;
+}
+.css-pyramid::after {
+  content: '';
+  position: absolute;
+  bottom: -120px; left: -30px;
+  width: 60px; height: 8px;
+  background: rgba(210,170,60,0.2);
+  border-radius: 50%;
+  filter: blur(4px);
+}
+
+/* Columns */
+.css-columns {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+}
+.css-column {
+  width: 22px;
+  background: linear-gradient(to right, rgba(210,190,150,0.2), rgba(210,190,150,0.5), rgba(210,190,150,0.2));
+  border-radius: 3px 3px 0 0;
+  position: relative;
+}
+.css-column::before {
+  content: '';
+  position: absolute;
+  top: -8px; left: -4px; right: -4px; height: 8px;
+  background: rgba(210,190,150,0.4);
+  border-radius: 2px;
+}
+
+/* Rocket */
+.css-rocket {
+  font-size: 5rem;
+  animation: rocket-hover 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba(78,184,255,0.5));
+}
+@keyframes rocket-hover {
+  0%,100% { transform: translateY(0) rotate(-5deg); }
+  50%      { transform: translateY(-18px) rotate(5deg); }
+}
+
+/* Snowflakes */
+.snowflake-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.sf {
+  position: absolute;
+  top: -20px;
+  color: rgba(180,220,255,0.5);
+  font-size: 0.8rem;
+  animation: snow-fall linear infinite;
+}
+@keyframes snow-fall {
+  to { transform: translateY(120vh) rotate(360deg); opacity: 0; }
+}
+
+/* Lava */
+.lava-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lava-blob {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ff9500, #ff3300);
+  filter: blur(4px);
+  animation: lava-rise ease-in-out infinite;
+  opacity: 0;
+}
+@keyframes lava-rise {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  20%  { opacity: 0.7; }
+  80%  { opacity: 0.4; }
+  100% { transform: translateY(-120px) scale(0.4); opacity: 0; }
+}
+
+/* Big Bang */
+.bigbang-rings {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  overflow: hidden;
+}
+.bb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(255,220,100,0.3);
+  animation: bb-expand ease-out infinite;
+}
+@keyframes bb-expand {
+  0%   { width:0; height:0; opacity:1; }
+  100% { width:300vmax; height:300vmax; opacity:0; }
+}
+
+/* Separators between eras */
+.era-sep {
+  height: 8px;
+  position: relative;
+  z-index: 10;
+}
+.era-sep::before {
+  content: '';
+  position: absolute;
+  left: clamp(3rem,8vw,9rem);
+  right: 40%;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(to right, var(--era-color), transparent);
+  opacity: 0.12;
+}
+
+/* Finale */
+#finale {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  z-index: 10;
+  padding: 4rem 2rem;
+}
+.finale-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(2rem, 6vw, 5rem);
+  font-weight: 700;
+  margin-bottom: 2rem;
+  line-height: 1.1;
+}
+.finale-desc {
+  font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+  line-height: 1.9;
+  color: var(--bone-dim);
+  max-width: 560px;
+  margin: 0 auto 3rem;
+}
+.restart-btn {
+  display: inline-block;
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--bone);
+  border: 1px solid rgba(237,232,218,0.2);
+  padding: 0.9rem 2.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: none;
+  font-family: inherit;
+}
+.restart-btn:hover {
+  border-color: rgba(237,232,218,0.6);
+  background: rgba(237,232,218,0.05);
+}
+
+/* Comet */
+.comet {
+  position: fixed;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(237,232,218,0.6));
+  pointer-events: none;
+  z-index: 5;
+  transform-origin: right center;
+  animation: comet-fly linear infinite;
+  opacity: 0;
+}
+@keyframes comet-fly {
+  0%   { opacity:0; }
+  5%   { opacity:1; }
+  95%  { opacity:1; }
+  100% { opacity:0; }
+}
+
+/* Timeline milestone markers */
+.era-milestone {
+  position: absolute;
+  left: clamp(1.5rem,4vw,4rem);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.4;
+}
+.milestone-line { width: 1px; height: 40px; background: var(--era-color); }
+.milestone-dot  { width: 5px; height: 5px; border-radius: 50%; background: var(--era-color); }
+
+@media (max-width: 768px) {
+  .scene-decoration { display: none; }
+  .era { padding-left: 1.5rem; }
+  #hud { right: 12px; width: 90px; }
+  .era-milestone { display: none; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div id="era-glow"></div>
+<div id="progress-line"></div>
+
+<!-- ─── HUD ─── -->
+<div id="hud">
+  <div id="hud-year">2026</div>
+  <div id="hud-era">The Digital Age</div>
+  <div id="hud-track"><div id="hud-thumb"></div></div>
+  <div id="hud-countdown" id="hud-countdown">Until Big Bang:<br><span id="hud-countdown-val">13.8 billion years</span></div>
+</div>
+
+<!-- ─── Comets ─── -->
+<div class="comet" style="width:200px;top:15%;left:10%;transform:rotate(25deg);animation-duration:8s;animation-delay:2s"></div>
+<div class="comet" style="width:140px;top:60%;left:5%;transform:rotate(15deg);animation-duration:12s;animation-delay:6s"></div>
+<div class="comet" style="width:260px;top:35%;left:20%;transform:rotate(35deg);animation-duration:10s;animation-delay:1s"></div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- OPENING -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="opening">
+  <div class="interface-frame">
+    <div class="hud-label">Current Date</div>
+    <div class="hud-date">July 14, 2026</div>
+    <div class="interface-divider"></div>
+    <div class="interface-status">
+      <div class="status-dot"></div>
+      TIME DISPLACEMENT SYSTEM ONLINE
+    </div>
+  </div>
+  <div class="opening-tagline">"Every scroll rewinds history."</div>
+  <div class="scroll-cue">
+    <span>Begin the journey</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- TIMELINE ERAS — each with data-color for JS era detection -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<!-- 2023 -->
+<div class="era" data-era="2023" data-color="#4eb8ff" data-label="The AI Revolution">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">2023</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The AI Revolution</div></div>
+    <div class="era-year-display">2023</div>
+    <div class="era-title">ChatGPT Changes Everything</div>
+    <div class="era-desc">Within months of its release, ChatGPT reaches 100 million users — the fastest-growing consumer application in history. Artificial intelligence shifts from a laboratory concept to a daily tool. Writers, coders, doctors, teachers, lawyers: no profession is left untouched. The question is no longer whether machines can think, but what thinking even means.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🤖</div><div class="fact-key">Users in 2 months</div><div class="fact-val">100 million</div></div>
+      <div class="fact"><div class="fact-icon">💻</div><div class="fact-key">Model parameters</div><div class="fact-val">~175 billion</div></div>
+      <div class="fact"><div class="fact-icon">🌐</div><div class="fact-key">Languages spoken</div><div class="fact-val">95+</div></div>
+    </div>
+    <div class="reveal-trigger" onclick="toggleReveal(this)">+ Deeper context</div>
+    <div class="reveal-content">The term "artificial general intelligence" — long a science-fiction concept — enters mainstream debate. Sam Altman testifies before the US Senate. The EU rushes to pass the world's first AI Act. Simultaneously, artists file lawsuits over training data; students submit AI-written essays; radiologists discover AI outperforms them on certain scans. A technology that took 70 years to build rewrites civilization in 70 weeks.</div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 2020 -->
+<div class="era" data-era="2020" data-color="#b0d4ff" data-label="The Pandemic">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">2020</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Modern Age</div></div>
+    <div class="era-year-display">2020</div>
+    <div class="era-title">COVID-19 — The World Stops</div>
+    <div class="era-desc">For the first time in modern history, the entire planet simultaneously pauses. Borders close. Skies empty. Streets fall silent. A virus smaller than a wavelength of visible light rewrites every assumption about globalization, health infrastructure, and collective human behavior. Overnight, the handshake becomes a gesture of danger.</div>
+    <div class="era-quote">"In the middle of every difficulty lies opportunity." — Albert Einstein</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🦠</div><div class="fact-key">Countries affected</div><div class="fact-val">195</div></div>
+      <div class="fact"><div class="fact-icon">💉</div><div class="fact-key">Vaccines developed</div><div class="fact-val">Under 1 year</div></div>
+      <div class="fact"><div class="fact-icon">📉</div><div class="fact-key">GDP contraction</div><div class="fact-val">Worst since 1929</div></div>
+    </div>
+    <div class="reveal-trigger" onclick="toggleReveal(this)">+ Deeper context</div>
+    <div class="reveal-content">mRNA vaccine technology — decades in development — is deployed in under a year, the fastest vaccine development in history. Meanwhile, conspiracy theories spread faster than the virus itself, revealing a parallel pandemic of misinformation. Zoom calls, sourdough bread, and balcony concerts become symbols of 2020. 7 million official deaths. The true toll may never be known.</div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 2001 -->
+<div class="era" data-era="2001" data-color="#7fadff" data-label="The Post-9/11 World">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">2001</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Turning Point</div></div>
+    <div class="era-year-display">2001</div>
+    <div class="era-title">September 11 — The Day the World Changed</div>
+    <div class="era-desc">At 8:46 AM on a clear Tuesday morning in New York, a passenger jet strikes the North Tower of the World Trade Center. The world watches live as a second plane hits the South Tower 17 minutes later. By 10:28 AM, both towers have collapsed. 2,977 people are killed. Twenty years of war begin. Airport security, surveillance states, and modern geopolitics are permanently reshaped in a single morning.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🗺️</div><div class="fact-key">Wars triggered</div><div class="fact-val">Afghanistan + Iraq</div></div>
+      <div class="fact"><div class="fact-icon">💸</div><div class="fact-key">Economic impact</div><div class="fact-val">$2 trillion+</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1991 -->
+<div class="era" data-era="1991" data-color="#5ab4e8" data-label="The Cold War Ends">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1991</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Late 20th Century</div></div>
+    <div class="era-year-display">1991</div>
+    <div class="era-title">The Soviet Union Dissolves</div>
+    <div class="era-desc">On Christmas Day 1991, Mikhail Gorbachev resigns and the Soviet flag is lowered over the Kremlin for the last time. The largest country on Earth breaks into 15 independent nations. A 45-year nuclear standoff — a cold war that held the world's fate in two superpowers' hands — ends not with a bang but with paperwork. The United States becomes the world's sole superpower. A new world order begins.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🇷🇺</div><div class="fact-key">New nations born</div><div class="fact-val">15</div></div>
+      <div class="fact"><div class="fact-icon">☢️</div><div class="fact-key">Nuclear warheads</div><div class="fact-val">~45,000 at peak</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1989 -->
+<div class="era" data-era="1989" data-color="#88ccff" data-label="The Wall Falls">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1989</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Late 20th Century</div></div>
+    <div class="era-year-display">1989</div>
+    <div class="era-title">The Berlin Wall Falls</div>
+    <div class="era-desc">On November 9th, a Communist party spokesman accidentally announces that East Germans may cross the border "immediately, without delay." Thousands flood the checkpoints. Guards, outnumbered and bewildered, stand aside. By midnight, ordinary people with hammers and chisels are dismantling the most hated symbol of the Cold War. A concrete scar that divided a city, a country, and an ideology for 28 years crumbles overnight — not by force, but by joy.</div>
+    <div class="era-quote">"Mr. Gorbachev, tear down this wall!" — Ronald Reagan, 1987</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🧱</div><div class="fact-key">Wall length</div><div class="fact-val">155 km</div></div>
+      <div class="fact"><div class="fact-icon">⏳</div><div class="fact-key">Years standing</div><div class="fact-val">28 years</div></div>
+      <div class="fact"><div class="fact-icon">👥</div><div class="fact-key">People killed crossing</div><div class="fact-val">140+ confirmed</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1969 -->
+<div class="era" data-era="1969" data-color="#c8d8ff" data-label="The Space Age">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1969</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Space Age</div></div>
+    <div class="era-year-display">1969</div>
+    <div class="era-title">One Small Step — Apollo 11</div>
+    <div class="era-desc">At 10:56 PM EDT on July 20, 1969, Neil Armstrong plants his left boot into the lunar regolith. 600 million people watch on grainy black-and-white television — the largest audience in history. Earth hangs in the black sky like a blue marble. The goal set by Kennedy just 8 years earlier — dismissed as impossible — is achieved with less computing power than a modern pocket calculator.</div>
+    <div class="scene-decoration"><div class="css-rocket">🚀</div></div>
+    <div class="era-quote">"That's one small step for man, one giant leap for mankind." — Neil Armstrong</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🌑</div><div class="fact-key">Distance traveled</div><div class="fact-val">384,400 km</div></div>
+      <div class="fact"><div class="fact-icon">⏱️</div><div class="fact-key">Time on the Moon</div><div class="fact-val">21 hours 36 min</div></div>
+      <div class="fact"><div class="fact-icon">💾</div><div class="fact-key">Computer memory</div><div class="fact-val">4 KB RAM</div></div>
+    </div>
+    <div class="reveal-trigger" onclick="toggleReveal(this)">+ The conspiracy theories</div>
+    <div class="reveal-content">Despite overwhelming evidence — 842 lbs of Moon rocks, retroreflectors still used by astronomers today, independent tracking by foreign nations including the USSR — a 2019 poll found 6% of Americans still believe the Moon landing was faked. The irony: the Soviet Union, with every incentive to expose a hoax, never did. They knew it was real.</div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1945 -->
+<div class="era" data-era="1945" data-color="#d4a060" data-label="World War II">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1945</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">World War II — 1939–1945</div></div>
+    <div class="era-year-display">1939–1945</div>
+    <div class="era-title">The Deadliest Conflict in Human History</div>
+    <div class="era-desc">Seventy to eighty-five million people die in six years. An estimated six million Jews are systematically murdered in the Holocaust. Cities are reduced to rubble from London to Leningrad, from Dresden to Tokyo. On August 6, 1945, a single weapon — the atomic bomb — destroys Hiroshima in seconds. Three days later, Nagasaki. The concept of total war reaches its logical, horrifying conclusion.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">💀</div><div class="fact-key">Deaths (est.)</div><div class="fact-val">70–85 million</div></div>
+      <div class="fact"><div class="fact-icon">🌍</div><div class="fact-key">Nations at war</div><div class="fact-val">30+</div></div>
+      <div class="fact"><div class="fact-icon">⚛️</div><div class="fact-key">Hiroshima deaths</div><div class="fact-val">70,000–80,000</div></div>
+    </div>
+    <div class="reveal-trigger" onclick="toggleReveal(this)">+ The aftermath</div>
+    <div class="reveal-content">From the ruins of WWII emerge the United Nations, the Universal Declaration of Human Rights, NATO, the Marshall Plan, the state of Israel, and the Cold War. The trauma is so deep that Europe — enemies for centuries — begins building a political union specifically designed to make another world war impossible. It mostly works.</div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1912 -->
+<div class="era" data-era="1912" data-color="#6090c0" data-label="The Gilded Age">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1912</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Gilded Age</div></div>
+    <div class="era-year-display">1912</div>
+    <div class="era-title">The Titanic — "God Himself Could Not Sink This Ship"</div>
+    <div class="era-desc">At 11:40 PM on April 14, 1912, the RMS Titanic — the largest ship ever built, considered unsinkable — strikes an iceberg in the North Atlantic. In 2 hours and 40 minutes, she is gone. Of 2,224 passengers, 1,517 die. The tragedy doesn't merely sink a ship; it sinks an era of technological overconfidence, puncturing the Edwardian belief that human engineering had conquered nature.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🚢</div><div class="fact-key">Ship length</div><div class="fact-val">269 metres</div></div>
+      <div class="fact"><div class="fact-icon">❄️</div><div class="fact-key">Iceberg warnings</div><div class="fact-val">6 ignored</div></div>
+      <div class="fact"><div class="fact-icon">🆘</div><div class="fact-key">Lifeboat capacity</div><div class="fact-val">Half passengers</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1903 -->
+<div class="era" data-era="1903" data-color="#80b0d0" data-label="The Industrial Age">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1903</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Industrial Age</div></div>
+    <div class="era-year-display">1903</div>
+    <div class="era-title">The Wright Brothers Leave the Ground</div>
+    <div class="era-desc">On December 17, 1903, at Kitty Hawk, North Carolina, Orville Wright pilots a gasoline-powered biplane for 12 seconds. The flight covers 37 metres. The world's press largely ignores it. By 1969 — 66 years later — humans walk on the Moon. No technology in history has advanced so far so fast. From 12 seconds of flight to breaking the sound barrier took just 44 years.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">✈️</div><div class="fact-key">First flight duration</div><div class="fact-val">12 seconds</div></div>
+      <div class="fact"><div class="fact-icon">📏</div><div class="fact-key">Distance</div><div class="fact-val">37 metres</div></div>
+      <div class="fact"><div class="fact-icon">🌡️</div><div class="fact-key">Wind speed</div><div class="fact-val">43 km/h</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1859 -->
+<div class="era" data-era="1859" data-color="#90c890" data-label="The Victorian Age">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1859</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Victorian Age</div></div>
+    <div class="era-year-display">1859</div>
+    <div class="era-title">Darwin's "On the Origin of Species"</div>
+    <div class="era-desc">Charles Darwin publishes one of the most consequential books ever written. Natural selection — the idea that life evolves through survival of the fittest over millions of years — upends the religious foundation of Victorian society, reframes humanity's place in the natural order, and lays the intellectual groundwork for genetics, medicine, ecology, and evolutionary psychology. The first edition of 1,250 copies sells out on the first day.</div>
+    <div class="era-quote">"There is grandeur in this view of life." — Charles Darwin</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🐢</div><div class="fact-key">Years developing theory</div><div class="fact-val">20+ years</div></div>
+      <div class="fact"><div class="fact-icon">📚</div><div class="fact-key">First edition copies</div><div class="fact-val">1,250</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1789 -->
+<div class="era" data-era="1789" data-color="#e8c878" data-label="The Age of Revolution">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1789</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Age of Revolution</div></div>
+    <div class="era-year-display">1789</div>
+    <div class="era-title">The French Revolution — Liberty, Equality, Fraternity</div>
+    <div class="era-desc">On July 14, 1789, a mob storms the Bastille — a royal prison holding just seven prisoners — and a revolution that will transform the world is ignited. Within years, the monarchy is abolished, the King and Queen are guillotined, and the concept of divine right to rule crumbles across Europe. The Declaration of the Rights of Man proclaims that sovereignty belongs to the people. Modern democracy is born — though the Terror also kills 17,000 in its name.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">⚔️</div><div class="fact-key">Guillotined in Terror</div><div class="fact-val">~17,000</div></div>
+      <div class="fact"><div class="fact-icon">👑</div><div class="fact-key">Monarchy abolished</div><div class="fact-val">1792</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1776 -->
+<div class="era" data-era="1776" data-color="#f0c060" data-label="The Enlightenment">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1776</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Enlightenment Era</div></div>
+    <div class="era-year-display">1776</div>
+    <div class="era-title">The American Declaration of Independence</div>
+    <div class="era-desc">On July 4, 1776, fifty-six men sign a document that declares all men are "endowed by their Creator with certain unalienable Rights" — including "Life, Liberty and the pursuit of Happiness." The radical idea: government exists to serve the governed, not the other way around. This document, drafted by a slaveholder in a slaveholding society, nevertheless unleashes an idea that would spend the next 250 years trying to live up to itself.</div>
+    <div class="era-quote">"We hold these truths to be self-evident." — Thomas Jefferson, 1776</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">✍️</div><div class="fact-key">Signatories</div><div class="fact-val">56</div></div>
+      <div class="fact"><div class="fact-icon">📜</div><div class="fact-key">Days to draft</div><div class="fact-val">17</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1687 -->
+<div class="era" data-era="1687" data-color="#a8c0e0" data-label="The Scientific Revolution">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1687</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Scientific Revolution</div></div>
+    <div class="era-year-display">1687</div>
+    <div class="era-title">Newton's Principia — God's Laws Written in Mathematics</div>
+    <div class="era-desc">Isaac Newton publishes the Philosophiae Naturalis Principia Mathematica, describing the laws of motion and universal gravitation. For the first time, the universe is shown to operate on mathematical principles discoverable by human reason — the same force that drops an apple moves the Moon. The Principia is the foundation of classical mechanics, engineering, and the entire Industrial Revolution that follows.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🍎</div><div class="fact-key">Written in</div><div class="fact-val">18 months</div></div>
+      <div class="fact"><div class="fact-icon">📐</div><div class="fact-key">Copies printed</div><div class="fact-val">~300–400</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1543 -->
+<div class="era" data-era="1543" data-color="#c8d8a0" data-label="The Renaissance">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1543</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Renaissance</div></div>
+    <div class="era-year-display">1543</div>
+    <div class="era-title">Copernicus — Earth Is Not the Center</div>
+    <div class="era-desc">On his deathbed, Nicolas Copernicus publishes De revolutionibus orbium coelestium, proposing that the Earth revolves around the Sun — not the other way around. The Church has taught geocentrism for a thousand years. Copernicus's heliocentric model is the first step in a chain reaction that leads through Galileo, Kepler, and Newton to a complete overhaul of humanity's understanding of its place in the cosmos. We are not the center of everything.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">☀️</div><div class="fact-key">Delayed publication</div><div class="fact-val">30+ years</div></div>
+      <div class="fact"><div class="fact-icon">📖</div><div class="fact-key">Church ban lifted</div><div class="fact-val">1835</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1519 -->
+<div class="era" data-era="1519" data-color="#d0a060" data-label="The Age of Exploration">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1519</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Age of Exploration</div></div>
+    <div class="era-year-display">1519</div>
+    <div class="era-title">Magellan Circumnavigates the Globe</div>
+    <div class="era-desc">Ferdinand Magellan sets out from Spain with five ships and 270 men. Three years later, one ship and 18 emaciated survivors return — without Magellan, who was killed in the Philippines. But they have done something never done before: sailed all the way around the world, proving once and for all that the Earth is a sphere and the oceans are connected. The Age of Exploration rewrites every map, culture, and economy on the planet — through wonder and through conquest.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">⛵</div><div class="fact-key">Ships departed</div><div class="fact-val">5</div></div>
+      <div class="fact"><div class="fact-icon">🧭</div><div class="fact-key">Ships returned</div><div class="fact-val">1</div></div>
+      <div class="fact"><div class="fact-icon">📅</div><div class="fact-key">Journey length</div><div class="fact-val">3 years</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1492 -->
+<div class="era" data-era="1492" data-color="#c09060" data-label="The Age of Discovery">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1492</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Age of Discovery</div></div>
+    <div class="era-year-display">1492</div>
+    <div class="era-title">Columbus Reaches the Americas</div>
+    <div class="era-desc">On October 12, 1492, Christopher Columbus lands in the Bahamas, believing he has reached Asia. He has instead stumbled upon two continents unknown to Europe — home to an estimated 60 million people. The encounter that follows is simultaneously the greatest exchange of crops, animals, ideas, and diseases in history, and one of the greatest demographic catastrophes: within a century, 90% of the indigenous population of the Americas is dead — mostly from smallpox.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🌎</div><div class="fact-key">Indigenous pop. before</div><div class="fact-val">~60 million</div></div>
+      <div class="fact"><div class="fact-icon">💀</div><div class="fact-key">Died from disease</div><div class="fact-val">~90% within 100 yrs</div></div>
+    </div>
+    <div class="reveal-trigger" onclick="toggleReveal(this)">+ The Columbian Exchange</div>
+    <div class="reveal-content">The Columbian Exchange transfers tomatoes, potatoes, corn, cacao, and tobacco to Europe — transforming European cuisine forever. In return, the Americas receive horses, cattle, wheat, and inadvertently, smallpox, measles, and influenza. The potato alone will feed Europe's population explosion and trigger the Irish Famine when a blight destroys it in 1845. Food is geopolitics.</div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1450 -->
+<div class="era" data-era="1450" data-color="#d8b878" data-label="The Early Renaissance">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1450</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Early Renaissance</div></div>
+    <div class="era-year-display">c. 1450</div>
+    <div class="era-title">Gutenberg's Printing Press — Information Unleashed</div>
+    <div class="era-desc">Johannes Gutenberg's movable-type printing press reduces the cost of producing a book from the equivalent of a year's wages to a week's. Books that took monks months to copy by hand can now be printed in hours. Within 50 years, over 20 million books are in circulation across Europe. The Protestant Reformation, the Scientific Revolution, and the Enlightenment all follow directly. The printing press is the internet of the 15th century.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">📖</div><div class="fact-key">Books by 1500</div><div class="fact-val">20 million</div></div>
+      <div class="fact"><div class="fact-icon">✝️</div><div class="fact-key">Bibles printed first</div><div class="fact-val">~180 copies</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1347 -->
+<div class="era" data-era="1347" data-color="#806060" data-label="The Black Death">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1347</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Black Death</div></div>
+    <div class="era-year-display">1347–1351</div>
+    <div class="era-title">The Black Death — Europe's Darkest Hour</div>
+    <div class="era-desc">Carried by fleas on rats aboard Genoese trading ships, the bubonic plague arrives in Sicily in October 1347. Within four years, it kills between 30 and 60 percent of Europe's population — an estimated 25 million people. Entire villages vanish. Survivors inherit the estates of the dead. Labor becomes precious. The feudal system, dependent on peasant serfdom, cannot survive a world where peasants can demand wages. Paradoxically, the Black Death accelerates the birth of the modern world.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">⚰️</div><div class="fact-key">Europeans killed</div><div class="fact-val">30–60%</div></div>
+      <div class="fact"><div class="fact-icon">🌍</div><div class="fact-key">Total deaths global</div><div class="fact-val">75–200 million</div></div>
+      <div class="fact"><div class="fact-icon">📅</div><div class="fact-key">Time to spread Europe</div><div class="fact-val">4 years</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1215 -->
+<div class="era" data-era="1215" data-color="#b0a080" data-label="Medieval England">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1215</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">Medieval England</div></div>
+    <div class="era-year-display">1215</div>
+    <div class="era-title">Magna Carta — No One Is Above the Law</div>
+    <div class="era-desc">King John of England, broke and militarily humiliated, is forced by his rebellious barons to sign the Magna Carta at Runnymede on June 15, 1215. For the first time in English history, a king acknowledges that his power is limited by law. Clause 39 declares that no free man may be imprisoned, outlawed, or harmed "except by the lawful judgment of his peers." Eight centuries later, this principle lives in the US Constitution, the UN Declaration of Human Rights, and every democracy on Earth.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">📜</div><div class="fact-key">Clauses</div><div class="fact-val">63</div></div>
+      <div class="fact"><div class="fact-icon">🏰</div><div class="fact-key">King</div><div class="fact-val">John of England</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 1066 -->
+<div class="era" data-era="1066" data-color="#a09070" data-label="The Norman Conquest">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">1066</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Norman Conquest</div></div>
+    <div class="era-year-display">1066</div>
+    <div class="era-title">The Battle of Hastings — England Is Remade</div>
+    <div class="era-desc">On October 14, 1066, Harold II, the last Anglo-Saxon king of England, is killed at Hastings — according to legend, by an arrow through the eye. William the Conqueror seizes the throne. Within 20 years, the entire English aristocracy is replaced with Normans. The English language absorbs thousands of French words. The feudal system is imposed. Modern English — a hybrid of Germanic Anglo-Saxon and Norman French — is born from this conquest. Every subsequent English monarch descends from William.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">⚔️</div><div class="fact-key">Battle duration</div><div class="fact-val">~9 hours</div></div>
+      <div class="fact"><div class="fact-icon">📊</div><div class="fact-key">Domesday Book survey</div><div class="fact-val">1086</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 476 -->
+<div class="era" data-era="476" data-color="#c09060" data-label="The Fall of Rome">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">476</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">Late Antiquity</div></div>
+    <div class="era-year-display">476 CE</div>
+    <div class="era-title">The Fall of Western Rome</div>
+    <div class="era-desc">On September 4, 476 CE, the Germanic chieftain Odoacer deposes Romulus Augustulus, the last emperor of the Western Roman Empire. The collapse does not happen overnight — Rome has been declining for a century under the pressure of economic crisis, military overextension, plague, and barbarian migration. But this moment ends 1,200 years of Roman civilization. Roads crumble. Literacy falls. Cities empty. The Dark Ages begin.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🏛️</div><div class="fact-key">Years Rome existed</div><div class="fact-val">~1,200</div></div>
+      <div class="fact"><div class="fact-icon">🗺️</div><div class="fact-key">Empire population</div><div class="fact-val">~70 million</div></div>
+    </div>
+    <div class="reveal-trigger" onclick="toggleReveal(this)">+ What Rome gave us</div>
+    <div class="reveal-content">Latin becomes the root of French, Spanish, Italian, Portuguese, and Romanian. Roman law becomes the foundation of nearly every modern legal system in continental Europe. The calendar, concrete, aqueducts, underfloor heating, the concept of a standardized currency — Rome's gifts are so fundamental we forget they were invented. When Rome fell, much of this knowledge was lost for centuries. The Renaissance would largely be an attempt to rediscover it.</div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 44 BCE — Caesar -->
+<div class="era" data-era="-44" data-color="#d4b060" data-label="The Roman Republic">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">44 BCE</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Roman Republic</div></div>
+    <div class="era-year-display">44 BCE</div>
+    <div class="era-title">The Assassination of Julius Caesar</div>
+    <div class="era-desc">On the Ides of March — March 15, 44 BCE — a group of senators stab Julius Caesar 23 times on the floor of the Theatre of Pompey. The assassins believe they are saving the Roman Republic from a tyrant. Instead, they trigger a civil war that ends the Republic forever. Caesar's adopted son Octavian defeats his rivals and becomes Augustus — the first Roman Emperor. The irony: by killing Caesar to prevent one-man rule, his killers cause it.</div>
+    <div class="scene-decoration">
+      <div class="css-columns">
+        <div class="css-column" style="height:100px"></div>
+        <div class="css-column" style="height:130px"></div>
+        <div class="css-column" style="height:110px"></div>
+        <div class="css-column" style="height:90px"></div>
+      </div>
+    </div>
+    <div class="era-quote">"Et tu, Bruté?" — Shakespeare's Julius Caesar</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🗡️</div><div class="fact-key">Stab wounds</div><div class="fact-val">23</div></div>
+      <div class="fact"><div class="fact-icon">👤</div><div class="fact-key">Conspirators</div><div class="fact-val">60+</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- Ancient Rome — Colosseum -->
+<div class="era" data-era="-100" data-color="#e0b060" data-label="Ancient Rome">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">100 CE</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">Ancient Rome — At Its Peak</div></div>
+    <div class="era-year-display">~100 CE</div>
+    <div class="era-title">Rome — The Eternal City at Its Height</div>
+    <div class="era-desc">Under Emperor Trajan, the Roman Empire reaches its maximum extent — 5 million square kilometres, 70 million people, and the greatest road network the ancient world has ever seen. In the Colosseum, 50,000 Romans cheer gladiatorial combat. The Forum bustles with merchants, philosophers, and politicians. Aqueducts bring fresh water from mountains 90 kilometres away. It will be another 1,700 years before Europe builds cities this sophisticated again.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🏟️</div><div class="fact-key">Colosseum capacity</div><div class="fact-val">50,000–80,000</div></div>
+      <div class="fact"><div class="fact-icon">🛤️</div><div class="fact-key">Road network</div><div class="fact-val">400,000 km</div></div>
+      <div class="fact"><div class="fact-icon">🌊</div><div class="fact-key">Aqueducts in Rome</div><div class="fact-val">11</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 399 BCE — Socrates -->
+<div class="era" data-era="-399" data-color="#a0c0d8" data-label="Classical Athens">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">399 BCE</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">Classical Athens</div></div>
+    <div class="era-year-display">~450–399 BCE</div>
+    <div class="era-title">Socrates, Plato, Aristotle — The Roots of Western Thought</div>
+    <div class="era-desc">In a city of perhaps 300,000, three men — a stonemason's son, his student, and his student's student — invent philosophy, logic, ethics, political science, biology, and the scientific method. Socrates is executed for "corrupting the youth" and "impiety." He wrote nothing; we know him only through Plato. Aristotle tutors the young Alexander the Great. Their ideas will define Western civilization for the next 2,400 years.</div>
+    <div class="era-quote">"The unexamined life is not worth living." — Socrates</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🏛️</div><div class="fact-key">Athens pop. estimate</div><div class="fact-val">~300,000</div></div>
+      <div class="fact"><div class="fact-icon">⚗️</div><div class="fact-key">Aristotle's works</div><div class="fact-val">200+ treatises</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 490 BCE Marathon -->
+<div class="era" data-era="-490" data-color="#90b0c8" data-label="The Greco-Persian Wars">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">490 BCE</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Greco-Persian Wars</div></div>
+    <div class="era-year-display">490 BCE</div>
+    <div class="era-title">The Battle of Marathon — Against All Odds</div>
+    <div class="era-desc">At Marathon, 10,000 Athenian soldiers face a Persian force three times their number. Against all military logic, they charge at a run — their heavy armor confusing the Persians, who expect a static phalanx. The Persians are routed. A messenger runs 40 kilometres to Athens to announce victory, collapses, and dies. The modern marathon race commemorates that run. More importantly, Greek independence is preserved — and with it, the fragile experiment in democracy that will eventually reshape the world.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🏃</div><div class="fact-key">Marathon distance</div><div class="fact-val">~40 km</div></div>
+      <div class="fact"><div class="fact-icon">⚔️</div><div class="fact-key">Greek casualties</div><div class="fact-val">192</div></div>
+      <div class="fact"><div class="fact-icon">🇮🇷</div><div class="fact-key">Persian casualties</div><div class="fact-val">~6,400</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 2560 BCE — Great Pyramid -->
+<div class="era" data-era="-2560" data-color="#d8b870" data-label="Ancient Egypt">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">2560 BCE</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">Ancient Egypt — Old Kingdom</div></div>
+    <div class="era-year-display">c. 2560 BCE</div>
+    <div class="era-title">The Great Pyramid of Giza</div>
+    <div class="era-desc">Khufu's Great Pyramid rises 146 metres above the desert — the tallest structure on Earth for nearly 4,000 years, until Lincoln Cathedral is built in 1311 CE. 2.3 million stone blocks, each weighing an average of 2.5 tonnes, are quarried, transported, and precisely placed by a workforce of 20,000–30,000 people. Without wheels, iron tools, or computers, the builders achieve an alignment to true north accurate to within 0.05 degrees. The engineering remains awe-inspiring to modern architects.</div>
+    <div class="scene-decoration" style="opacity:0.5"><div class="css-pyramid"></div></div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">📐</div><div class="fact-key">Stone blocks</div><div class="fact-val">2.3 million</div></div>
+      <div class="fact"><div class="fact-icon">👷</div><div class="fact-key">Workers</div><div class="fact-val">20,000–30,000</div></div>
+      <div class="fact"><div class="fact-icon">🧭</div><div class="fact-key">North alignment error</div><div class="fact-val">0.05°</div></div>
+    </div>
+    <div class="reveal-trigger" onclick="toggleReveal(this)">+ Were they slaves?</div>
+    <div class="reveal-content">Modern archaeology has overturned the popular image of pyramid-builders as slaves. Excavated workers' villages show paid laborers who received medical care, meat rations, and burial with honor. Graffiti found in "relieving chambers" above the King's Chamber includes gang names like "Friends of Khufu" — suggesting workers who took pride in their labor. It was state-organized work, likely tied to a religious duty to participate in the pharaoh's eternal life.</div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 3300 BCE Writing -->
+<div class="era" data-era="-3300" data-color="#c8a860" data-label="The Dawn of Civilization">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">3300 BCE</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Dawn of Civilization</div></div>
+    <div class="era-year-display">c. 3300 BCE</div>
+    <div class="era-title">Writing Is Invented — Memory Becomes Eternal</div>
+    <div class="era-desc">In the Sumerian city of Uruk, in modern-day Iraq, an accountant presses a reed stylus into a wet clay tablet to record the allocation of barley. The earliest known writing is not poetry or prayer — it is a receipt. This mundane act of record-keeping is one of the most consequential inventions in human history. For the first time, knowledge can outlive its owner. History begins. Everything before this moment is prehistory.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">📝</div><div class="fact-key">Oldest writing</div><div class="fact-val">Sumerian cuneiform</div></div>
+      <div class="fact"><div class="fact-icon">🌾</div><div class="fact-key">First record</div><div class="fact-val">Barley allocation</div></div>
+      <div class="fact"><div class="fact-icon">🗺️</div><div class="fact-key">Location</div><div class="fact-val">Uruk, modern Iraq</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 10000 BCE Neolithic Revolution -->
+<div class="era" data-era="-10000" data-color="#90b870" data-label="The Neolithic Revolution">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">10,000 BCE</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Neolithic Revolution</div></div>
+    <div class="era-year-display">c. 10,000 BCE</div>
+    <div class="era-title">Agriculture — Humanity's Greatest Gamble</div>
+    <div class="era-desc">In the Fertile Crescent, humans begin deliberately planting and harvesting wheat and barley. For 200,000 years, our species has been hunter-gatherers — nomadic, mobile, nutritionally diverse. Agriculture allows larger, permanent settlements. But it also brings harder labor, smaller and less varied diets, epidemic disease from living near livestock, social hierarchy, slavery, and war over stored grain. Historian Yuval Noah Harari calls it "history's biggest fraud." We chose it anyway, and the world was never the same.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🌾</div><div class="fact-key">First crops</div><div class="fact-val">Wheat, barley</div></div>
+      <div class="fact"><div class="fact-icon">🐄</div><div class="fact-key">First domestic animal</div><div class="fact-val">Dog (~15,000 BCE)</div></div>
+      <div class="fact"><div class="fact-icon">🏘️</div><div class="fact-key">First city (est.)</div><div class="fact-val">Jericho, ~9,000 BCE</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 15000 BCE — Lascaux -->
+<div class="era" data-era="-15000" data-color="#c88050" data-label="Prehistoric Art">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">17,000 BCE</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Upper Paleolithic</div></div>
+    <div class="era-year-display">c. 17,000 BCE</div>
+    <div class="era-title">The Lascaux Cave Paintings — First Artists</div>
+    <div class="era-desc">In a cave in the Dordogne valley of France, prehistoric humans paint over 600 animals — bulls, horses, stags, ibex — using ochre, manganese, charcoal, and hematite. They blow pigment through hollow bones to create stencil hands. They use the cave's natural contours to suggest muscle and movement. These are not crude scrawlings — they are sophisticated works of art requiring spatial planning, pigment preparation, and an understanding of perspective. The human need to make art is at least 17,000 years old.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🎨</div><div class="fact-key">Paintings</div><div class="fact-val">600+ animals</div></div>
+      <div class="fact"><div class="fact-icon">🕯️</div><div class="fact-key">Painted by</div><div class="fact-val">Firelight only</div></div>
+      <div class="fact"><div class="fact-icon">🧰</div><div class="fact-key">Pigments used</div><div class="fact-val">Ochre, charcoal, hematite</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 200,000 BCE Homo Sapiens -->
+<div class="era" data-era="-200000" data-color="#a07850" data-label="The First Humans">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">200,000 BCE</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Paleolithic</div></div>
+    <div class="era-year-display">~200,000 BCE</div>
+    <div class="era-title">Homo Sapiens — "Wise Man" Appears</div>
+    <div class="era-desc">In East Africa, our species emerges. We are not the first humans — Homo erectus walked the earth 1.9 million years ago, Neanderthals dominated Europe, Denisovans inhabited Asia. But Homo sapiens has something different: the capacity for abstract thought, symbolic language, and complex social cooperation. We tell stories. We trade with strangers. We imagine gods. These cognitive abilities will allow a medium-sized primate, physically unremarkable, to reshape the entire biosphere of a planet.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🧠</div><div class="fact-key">Brain volume</div><div class="fact-val">~1,300 cc</div></div>
+      <div class="fact"><div class="fact-icon">🌍</div><div class="fact-key">Emerged in</div><div class="fact-val">East Africa</div></div>
+      <div class="fact"><div class="fact-icon">🧬</div><div class="fact-key">DNA shared w/ chimps</div><div class="fact-val">98.7%</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- Ice Age -->
+<div class="era" data-era="-20000" data-color="#80a8c8" data-label="The Ice Age">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">20,000 BCE</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Last Glacial Maximum</div></div>
+    <div class="era-year-display">~20,000 BCE</div>
+    <div class="era-title">The Ice Age — Mammoths Rule the Frozen Earth</div>
+    <div class="era-desc">At its peak, ice sheets two miles thick cover North America to New York, all of northern Europe, and most of Asia. Sea levels are 120 metres lower than today — exposing land bridges that allow humans to walk from Siberia to Alaska, settling the Americas. Woolly mammoths, woolly rhinos, saber-toothed cats, and giant ground sloths roam the frozen megafauna world. Human bands of 30–50 people follow the herds across a planet that looks nothing like the one we know.</div>
+    <div class="snowflake-field" id="sf1"></div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🧊</div><div class="fact-key">Ice sheet thickness</div><div class="fact-val">Up to 3 km</div></div>
+      <div class="fact"><div class="fact-icon">🌊</div><div class="fact-key">Sea level drop</div><div class="fact-val">120 metres</div></div>
+      <div class="fact"><div class="fact-icon">🦣</div><div class="fact-key">Mammoth extinction</div><div class="fact-val">~4,000 BCE</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 2.5 MYA Stone Tools -->
+<div class="era" data-era="-2500000" data-color="#987060" data-label="The Stone Age">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">2.5 MYA</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">The Paleolithic — 2.5 Million Years Ago</div></div>
+    <div class="era-year-display">2.5 Million BCE</div>
+    <div class="era-title">The First Stone Tools — Technology Is Born</div>
+    <div class="era-desc">In what is now Ethiopia, a hominin — perhaps Homo habilis, "Handy Man" — deliberately strikes one stone against another to create a sharp edge. This is the first technology. For 99% of human evolutionary history, stone tools are the most advanced technology we possess. But they allow us to butcher carcasses, process plant food, and eventually craft shelters and weapons — a cognitive leap that separates our lineage from every other animal on Earth.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🪨</div><div class="fact-key">Oldest tools found</div><div class="fact-val">Lomekwi, Kenya — 3.3 MYA</div></div>
+      <div class="fact"><div class="fact-icon">🔥</div><div class="fact-key">Fire controlled</div><div class="fact-val">~1 million years ago</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 6 MYA Human Split -->
+<div class="era" data-era="-6000000" data-color="#886050" data-label="The Primate Lineage">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">6 MYA</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">6 Million Years Ago</div></div>
+    <div class="era-year-display">6 Million BCE</div>
+    <div class="era-title">The Human-Chimpanzee Split</div>
+    <div class="era-desc">In the forests of equatorial Africa, a population of apes begins to diverge. One branch will eventually become chimpanzees and bonobos — our closest living relatives, with whom we share 98.7% of our DNA. The other branch begins the long road to bipedalism, enlarged brains, and language. The split is not an event but a process spanning hundreds of thousands of years, with interbreeding continuing long after divergence begins. We are great apes who learned to tell stories about ourselves.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🦧</div><div class="fact-key">DNA shared w/ chimps</div><div class="fact-val">98.7%</div></div>
+      <div class="fact"><div class="fact-icon">🦶</div><div class="fact-key">Bipedalism begins</div><div class="fact-val">~4.4 MYA</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- 66 MYA Extinction -->
+<div class="era" data-era="-66000000" data-color="#c06040" data-label="The K-Pg Extinction">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">66 MYA</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">66 Million Years Ago</div></div>
+    <div class="era-year-display">66 Million BCE</div>
+    <div class="era-title">The Asteroid — End of the Dinosaurs</div>
+    <div class="era-desc">A 10-kilometre-wide asteroid strikes the Yucatán Peninsula at 72,000 km/h. The impact releases energy equivalent to 10 billion Hiroshima bombs. Enormous wildfires erupt globally. A dust cloud blocks the Sun for months. 75% of all species on Earth go extinct within a year, including all non-avian dinosaurs after 165 million years of dominance. Small, insectivorous mammals — hiding underground, eating seeds and insects — survive. We are their descendants. Without that asteroid, there are no humans.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">☄️</div><div class="fact-key">Asteroid diameter</div><div class="fact-val">~10 km</div></div>
+      <div class="fact"><div class="fact-icon">💥</div><div class="fact-key">Energy released</div><div class="fact-val">10B × Hiroshima</div></div>
+      <div class="fact"><div class="fact-icon">💀</div><div class="fact-key">Species lost</div><div class="fact-val">75%</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- Jurassic -->
+<div class="era" data-era="-150000000" data-color="#406840" data-label="The Jurassic Period">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">150 MYA</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">150 Million Years Ago</div></div>
+    <div class="era-year-display">150 Million BCE</div>
+    <div class="era-title">The Jurassic — Age of the Giants</div>
+    <div class="era-desc">The Jurassic Period is the great age of reptiles. Brachiosauruses browse treetops 13 metres off the ground. Stegosauruses roam open plains. In the shallow seas, Ichthyosaurs pursue their prey while Pterosaurs glide on 10-metre wingspans above. In the forests, a crow-sized creature called Archaeopteryx — half bird, half dinosaur — takes to the skies. The first flowering plants have not yet appeared. The continents are beginning to drift apart from the supercontinent Pangaea.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🦕</div><div class="fact-key">Brachiosaurus height</div><div class="fact-val">~13 metres</div></div>
+      <div class="fact"><div class="fact-icon">🐦</div><div class="fact-key">First birds emerge</div><div class="fact-val">~150 MYA</div></div>
+      <div class="fact"><div class="fact-icon">🌍</div><div class="fact-key">Continents</div><div class="fact-val">Splitting from Pangaea</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- Cambrian Explosion -->
+<div class="era" data-era="-541000000" data-color="#306050" data-label="The Cambrian Explosion">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">541 MYA</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">541 Million Years Ago</div></div>
+    <div class="era-year-display">541 Million BCE</div>
+    <div class="era-title">The Cambrian Explosion — Life Goes Wild</div>
+    <div class="era-desc">In the blink of a geological eye — about 25 million years — virtually every major body plan of animal life appears in the fossil record. Eyes, shells, legs, claws, spines, jaws, fins. The sea fills with bizarre creatures unlike anything before or since: Anomalocaris, a metre-long predator with two rotating grasping appendages; Hallucigenia, with legs on top and spines on the bottom (scientists reversed its orientation for 100 years). In just 25 million years, life invents the blueprint for all complex animals that will ever exist.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🦐</div><div class="fact-key">Duration</div><div class="fact-val">~25 million years</div></div>
+      <div class="fact"><div class="fact-icon">👁️</div><div class="fact-key">First eyes evolved</div><div class="fact-val">This period</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- First Life -->
+<div class="era" data-era="-3500000000" data-color="#204840" data-label="The Origin of Life">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">3.5 BYA</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">3.5 Billion Years Ago</div></div>
+    <div class="era-year-display">3.5 Billion BCE</div>
+    <div class="era-title">The First Life — Stromatolites in a Primordial Sea</div>
+    <div class="era-desc">In a warm, shallow sea, single-celled microbes — cyanobacteria — begin building layered structures called stromatolites. These are the first complex organisms: life has conquered Earth. For the next 3 billion years, these simple prokaryotes will be the only life on the planet. Slowly, over billions of years, cyanobacteria will perform the most consequential chemical transformation in Earth's history: photosynthesis — pumping oxygen into an atmosphere that had none, poisoning the anaerobic world, and making oxygen-breathing animals possible.</div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🦠</div><div class="fact-key">Life's dominance</div><div class="fact-val">3 billion yrs of bacteria</div></div>
+      <div class="fact"><div class="fact-icon">💨</div><div class="fact-key">Oxygen produced by</div><div class="fact-val">Photosynthesis</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- Earth Formation -->
+<div class="era" data-era="-4540000000" data-color="#602020" data-label="Formation of Earth">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="era-bg-number">4.54 BYA</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot"></div><div class="era-period-label">4.54 Billion Years Ago</div></div>
+    <div class="era-year-display">4.54 Billion BCE</div>
+    <div class="era-title">Earth Is Born — A Molten World</div>
+    <div class="era-desc">Gravitational accretion draws dust and gas from the solar nebula into a growing sphere. The young Earth is a violent hellscape — its surface entirely molten rock, bombarded relentlessly by asteroids and planetesimals. Then, approximately 4.5 billion years ago, a Mars-sized body called Theia strikes the proto-Earth at a glancing angle. The collision is so violent it melts both bodies. Debris blasted into orbit slowly coalesces into our Moon. Earth's axis tilts 23.5 degrees — giving us seasons. The Moon stabilizes our climate. Life becomes possible.</div>
+    <div class="lava-field" id="lava1"></div>
+    <div class="era-facts">
+      <div class="fact"><div class="fact-icon">🌋</div><div class="fact-key">Surface temp (early)</div><div class="fact-val">>1000°C</div></div>
+      <div class="fact"><div class="fact-icon">🌕</div><div class="fact-key">Moon formed by</div><div class="fact-val">Theia collision</div></div>
+      <div class="fact"><div class="fact-icon">📐</div><div class="fact-key">Axial tilt result</div><div class="fact-val">Earth's seasons</div></div>
+    </div>
+  </div>
+</div>
+<div class="era-sep"></div>
+
+<!-- Big Bang -->
+<div class="era" data-era="-13800000000" data-color="#ffffff" data-label="The Beginning of Everything" id="big-bang-section">
+  <div class="era-milestone"><div class="milestone-line"></div><div class="milestone-dot"></div></div>
+  <div class="bigbang-rings" id="bb-rings"></div>
+  <div class="era-bg-number" style="color:rgba(0,0,0,0.04)">13.8 BYA</div>
+  <div class="era-inner">
+    <div class="era-eyebrow"><div class="era-dot" style="background:#ff9900"></div><div class="era-period-label" style="color:#c87020">The Beginning of Everything</div></div>
+    <div class="era-year-display" style="color:#1a1a2e">13.8 Billion Years Ago</div>
+    <div class="era-title" style="color:#2a2a3e">The Big Bang — t = 0</div>
+    <div class="era-desc" style="color:rgba(10,10,30,0.7)">There is no "before." Space, time, matter, and energy emerge simultaneously from a singularity of infinite density and temperature. In the first second, the universe expands faster than the speed of light. In the first three minutes, protons and neutrons fuse into the nuclei of hydrogen and helium. 380,000 years later, the universe cools enough for electrons to join those nuclei — and for the first time, light can travel freely. That first light is still detectable today as the cosmic microwave background radiation: a faint, uniform glow in every direction you look, the oldest light in the universe, an echo of the beginning of everything.</div>
+    <div class="era-facts">
+      <div class="fact" style="border-color:rgba(0,0,0,0.1);background:rgba(0,0,0,0.03)"><div class="fact-icon">🌌</div><div class="fact-key" style="color:rgba(0,0,0,0.4)">Universe age</div><div class="fact-val" style="color:#1a1a2e">13.8 billion years</div></div>
+      <div class="fact" style="border-color:rgba(0,0,0,0.1);background:rgba(0,0,0,0.03)"><div class="fact-icon">⭐</div><div class="fact-key" style="color:rgba(0,0,0,0.4)">Observable galaxies</div><div class="fact-val" style="color:#1a1a2e">~2 trillion</div></div>
+      <div class="fact" style="border-color:rgba(0,0,0,0.1);background:rgba(0,0,0,0.03)"><div class="fact-icon">🔭</div><div class="fact-key" style="color:rgba(0,0,0,0.4)">CMB discovered</div><div class="fact-val" style="color:#1a1a2e">1964, accidentally</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- FINALE -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="finale">
+  <div class="finale-title">You have<br>reached the beginning.</div>
+  <div class="finale-desc">From a point of infinite density 13.8 billion years ago — through the formation of stars, planets, and oceans — through single cells that learned to breathe oxygen, through the first footstep on a new continent, through every war and revolution and invention — to this moment, this screen, these words. Every atom in your body was forged in a dying star. You are the universe becoming aware of itself.</div>
+  <button class="restart-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">Return to the present</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<script>
+// ─── Three.js particle system ───────────────────────────────
+const canvas = document.getElementById('bg-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 80;
+
+// Particle field
+const particleCount = 3000;
+const positions = new Float32Array(particleCount * 3);
+const colors    = new Float32Array(particleCount * 3);
+const sizes     = new Float32Array(particleCount);
+
+for (let i = 0; i < particleCount; i++) {
+  positions[i*3]   = (Math.random() - 0.5) * 300;
+  positions[i*3+1] = (Math.random() - 0.5) * 300;
+  positions[i*3+2] = (Math.random() - 0.5) * 300;
+  colors[i*3] = colors[i*3+1] = colors[i*3+2] = 0.6 + Math.random() * 0.4;
+  sizes[i] = Math.random() * 2.5 + 0.5;
+}
+
+const geo = new THREE.BufferGeometry();
+geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+geo.setAttribute('color',    new THREE.BufferAttribute(colors, 3));
+geo.setAttribute('size',     new THREE.BufferAttribute(sizes, 1));
+
+const mat = new THREE.PointsMaterial({
+  size: 0.8,
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.75,
+  sizeAttenuation: true,
+});
+
+const particles = new THREE.Points(geo, mat);
+scene.add(particles);
+
+// Target color for particles
+let targetR = 0.35, targetG = 0.6, targetB = 1.0;
+let currentR = 0.35, currentG = 0.6, currentB = 1.0;
+let rotationSpeed = 0.00015;
+let scrollVelocity = 0;
+let lastScrollY = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  // Lerp particle color
+  currentR += (targetR - currentR) * 0.01;
+  currentG += (targetG - currentG) * 0.01;
+  currentB += (targetB - currentB) * 0.01;
+
+  for (let i = 0; i < particleCount; i++) {
+    colors[i*3]   = currentR * (0.7 + 0.3 * Math.random());
+    colors[i*3+1] = currentG * (0.7 + 0.3 * Math.random());
+    colors[i*3+2] = currentB * (0.7 + 0.3 * Math.random());
+  }
+  geo.attributes.color.needsUpdate = true;
+
+  // Scroll-speed rotation
+  const sv = Math.abs(scrollVelocity) * 0.0008;
+  particles.rotation.y += rotationSpeed + sv;
+  particles.rotation.x += rotationSpeed * 0.4 + sv * 0.3;
+
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ─── Era detection & HUD ────────────────────────────────────
+const eras = document.querySelectorAll('.era');
+const hudYear  = document.getElementById('hud-year');
+const hudEra   = document.getElementById('hud-era');
+const hudThumb = document.getElementById('hud-thumb');
+const hudCountdown = document.getElementById('hud-countdown-val');
+const progressLine = document.getElementById('progress-line');
+const eraGlow = document.getElementById('era-glow');
+
+// Map era data-era values to display strings
+function formatYear(val) {
+  const n = parseFloat(val);
+  if (n >= 0) return String(n) + ' CE';
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return (abs/1e9).toFixed(1) + ' BYA';
+  if (abs >= 1e6) return (abs/1e6).toFixed(1) + ' MYA';
+  return Math.round(abs) + ' BCE';
+}
+
+function countdownFrom(val) {
+  const n = parseFloat(val);
+  const bigBang = -13.8e9;
+  const diff = Math.abs(n - bigBang);
+  if (diff >= 1e9) return (diff/1e9).toFixed(1) + 'B years to Big Bang';
+  if (diff >= 1e6) return (diff/1e6).toFixed(1) + 'M years to Big Bang';
+  if (diff >= 1000) return Math.round(diff/1000) + ',000 yrs to Big Bang';
+  return Math.round(diff) + ' yrs to Big Bang';
+}
+
+let activeEraIndex = -1;
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const el = entry.target;
+
+      // Reveal animation
+      el.querySelector('.era-inner')?.classList.add('revealed');
+
+      // Update HUD
+      const eraVal   = el.dataset.era;
+      const eraColor = el.dataset.color || '#4eb8ff';
+      const eraLbl   = el.dataset.label || '';
+
+      hudYear.textContent = formatYear(eraVal);
+      hudEra.textContent  = eraLbl;
+      hudCountdown.textContent = countdownFrom(eraVal);
+
+      // Update CSS era color
+      document.documentElement.style.setProperty('--era-color', eraColor);
+      document.documentElement.style.setProperty('--era-bg', hexToRgba(eraColor, 0.05));
+
+      // Update particle target color
+      const rgb = hexToRgb(eraColor);
+      targetR = rgb.r / 255 * 0.7;
+      targetG = rgb.g / 255 * 0.7;
+      targetB = rgb.b / 255 * 0.7;
+
+      // Big Bang special background
+      if (el.id === 'big-bang-section') {
+        eraGlow.style.background = 'radial-gradient(ellipse at center, rgba(255,240,200,0.25), rgba(255,220,150,0.1), transparent)';
+        document.body.style.background = '#f5f0e8';
+      } else {
+        eraGlow.style.background = `radial-gradient(ellipse 60% 50% at 80% 50%, ${hexToRgba(eraColor, 0.06)}, transparent)`;
+        document.body.style.background = '#05050f';
+      }
+    }
+  });
+}, { threshold: 0.4, rootMargin: '-10% 0px -10% 0px' });
+
+eras.forEach(era => observer.observe(era));
+
+// ─── Scroll tracking ────────────────────────────────────────
+window.addEventListener('scroll', () => {
+  const scrollTop = window.scrollY;
+  const maxScroll = document.body.scrollHeight - window.innerHeight;
+  const pct = scrollTop / maxScroll;
+
+  progressLine.style.width = (pct * 100) + '%';
+  hudThumb.style.top = (pct * 108) + 'px';
+
+  scrollVelocity = scrollTop - lastScrollY;
+  lastScrollY = scrollTop;
+
+  // Rotation speed increases with scroll
+  rotationSpeed = 0.00015 + Math.abs(scrollVelocity) * 0.0001;
+}, { passive: true });
+
+// ─── Snowflakes for Ice Age ──────────────────────────────────
+const sfContainer = document.getElementById('sf1');
+if (sfContainer) {
+  for (let i = 0; i < 30; i++) {
+    const sf = document.createElement('div');
+    sf.className = 'sf';
+    sf.textContent = ['❄', '❅', '❆'][Math.floor(Math.random()*3)];
+    sf.style.cssText = `
+      left: ${Math.random()*100}%;
+      animation-duration: ${6 + Math.random()*8}s;
+      animation-delay: ${Math.random()*6}s;
+      font-size: ${0.6 + Math.random()*0.8}rem;
+      opacity: ${0.3 + Math.random()*0.5};
+    `;
+    sfContainer.appendChild(sf);
+  }
+}
+
+// ─── Lava blobs for Earth formation ─────────────────────────
+const lavaContainer = document.getElementById('lava1');
+if (lavaContainer) {
+  for (let i = 0; i < 18; i++) {
+    const b = document.createElement('div');
+    b.className = 'lava-blob';
+    const sz = 20 + Math.random() * 60;
+    b.style.cssText = `
+      width: ${sz}px; height: ${sz}px;
+      bottom: ${Math.random()*30}%;
+      left: ${Math.random()*100}%;
+      animation-duration: ${3 + Math.random()*4}s;
+      animation-delay: ${Math.random()*4}s;
+    `;
+    lavaContainer.appendChild(b);
+  }
+}
+
+// ─── Big Bang rings ──────────────────────────────────────────
+const bbRings = document.getElementById('bb-rings');
+if (bbRings) {
+  for (let i = 0; i < 6; i++) {
+    const ring = document.createElement('div');
+    ring.className = 'bb-ring';
+    ring.style.cssText = `
+      animation-duration: ${5 + i*1.5}s;
+      animation-delay: ${i * 0.8}s;
+      border-color: rgba(255,${180 - i*20},${50 + i*10},${0.3 - i*0.04});
+    `;
+    bbRings.appendChild(ring);
+  }
+}
+
+// ─── Reveal toggles ─────────────────────────────────────────
+function toggleReveal(el) {
+  const content = el.nextElementSibling;
+  content.classList.toggle('open');
+  el.textContent = content.classList.contains('open')
+    ? el.textContent.replace('+ ', '− ')
+    : el.textContent.replace('− ', '+ ');
+}
+
+// ─── Utility ────────────────────────────────────────────────
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return { r, g, b };
+}
+function hexToRgba(hex, a) {
+  try {
+    const { r, g, b } = hexToRgb(hex);
+    return `rgba(${r},${g},${b},${a})`;
+  } catch { return `rgba(78,184,255,${a})`; }
+}
+
+// ─── GSAP ScrollTrigger for warp effect ─────────────────────
+if (window.gsap && window.ScrollTrigger) {
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Opening fade out
+  gsap.to('#opening', {
+    opacity: 0,
+    scrollTrigger: {
+      trigger: '#opening',
+      start: 'top top',
+      end: 'bottom top',
+      scrub: true,
+    }
+  });
+}
+
+// ─── Initial HUD ────────────────────────────────────────────
+hudYear.textContent = '2026';
+hudEra.textContent  = 'The Digital Age';
+hudCountdown.textContent = '13.8 billion yrs to Big Bang';
+</script>
+</body>
+</html>

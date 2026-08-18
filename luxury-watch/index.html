@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chronovault — Haute Horlogerie</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --void:#050508;--dark:#0D0D14;--steel:#6E7278;--platinum:#C8CAD0;
+  --polished:#E8EAEF;--jewel:#C41E3A;--lume:#B8D4FF;--gold:#C8A84B;
+  --cream:#E8E6E0;--mid:#9A9DA5;
+}
+html{scroll-behavior:smooth}
+body{background:var(--void);color:var(--cream);font-family:Georgia,serif;overflow-x:hidden}
+
+/* ── SCROLL EXPERIENCE ── */
+#experience{position:relative;height:800vh}
+#canvas-wrap{
+  position:sticky;top:0;height:100vh;width:100%;overflow:hidden;
+  perspective:1400px;perspective-origin:50% 50%;
+}
+#c{
+  position:absolute;inset:0;width:100%;height:100%;
+  transform-style:preserve-3d;
+  transform:rotateX(0deg) rotateY(0deg);
+  will-change:transform;
+}
+
+/* ── TEXT OVERLAYS ── */
+.ov{
+  position:absolute;pointer-events:none;
+  opacity:0;transition:opacity 1.2s ease;
+}
+.ov.show{opacity:1}
+#ov-intro{bottom:12%;width:100%;text-align:center}
+#ov-count{left:6%;top:50%;transform:translateY(-50%)}
+#ov-calibre{right:6%;top:50%;transform:translateY(-50%);text-align:right}
+#ov-brand{top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;white-space:nowrap}
+#ov-dial{bottom:14%;width:100%;text-align:center}
+#ov-reveal{top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;white-space:nowrap}
+#ov-progress{
+  position:absolute;bottom:6%;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:12px;opacity:0.4;
+  font-family:system-ui,sans-serif;font-size:10px;letter-spacing:0.3em;
+  text-transform:uppercase;color:var(--platinum);pointer-events:none;
+}
+#ov-progress-bar{width:80px;height:1px;background:rgba(200,202,208,0.2);position:relative}
+#ov-progress-fill{position:absolute;left:0;top:0;height:1px;background:var(--platinum);width:0%;transition:width 0.1s}
+
+.eyebrow{
+  font-family:system-ui,sans-serif;font-size:10px;letter-spacing:0.35em;
+  text-transform:uppercase;color:var(--gold);margin-bottom:14px;
+}
+.display{
+  font-family:Georgia,serif;font-size:clamp(38px,6vw,78px);
+  letter-spacing:0.18em;text-transform:uppercase;color:var(--cream);
+  font-weight:300;line-height:1;
+}
+.sub{
+  font-family:system-ui,sans-serif;font-size:clamp(10px,1.1vw,13px);
+  letter-spacing:0.22em;text-transform:uppercase;color:var(--mid);
+  margin-top:18px;
+}
+.spec-block{border-left:1px solid rgba(200,168,75,0.4);padding-left:20px;margin-bottom:28px}
+.spec-label{font-family:system-ui,sans-serif;font-size:9px;letter-spacing:0.35em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.spec-val{font-family:Georgia,serif;font-size:clamp(22px,3vw,38px);color:var(--cream);letter-spacing:0.05em}
+
+/* ── INTERACTIVE SECTION ── */
+#interactive{
+  background:var(--dark);padding:100px 0;
+  border-top:1px solid rgba(200,202,208,0.08);
+}
+.int-inner{max-width:1100px;margin:0 auto;padding:0 40px}
+.int-header{text-align:center;margin-bottom:70px}
+.int-header .eyebrow{margin-bottom:12px}
+.int-header .display{font-size:clamp(28px,4vw,52px)}
+#int-canvas-wrap{
+  position:relative;perspective:1200px;width:500px;height:500px;
+  margin:0 auto 60px;cursor:grab
+}
+#int-canvas-wrap:active{cursor:grabbing}
+#int-c{width:100%;height:100%;transform-style:preserve-3d}
+
+.controls{display:flex;flex-wrap:wrap;gap:32px;justify-content:center;margin-bottom:60px}
+.control-group{text-align:center}
+.control-label{font-family:system-ui,sans-serif;font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.swatches{display:flex;gap:8px;justify-content:center}
+.swatch{
+  width:28px;height:28px;border-radius:50%;cursor:pointer;
+  border:2px solid transparent;transition:border-color 0.2s,transform 0.2s;
+}
+.swatch:hover{transform:scale(1.15)}
+.swatch.active{border-color:var(--cream)}
+.btn-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.tog-btn{
+  font-family:system-ui,sans-serif;font-size:9px;letter-spacing:0.25em;
+  text-transform:uppercase;padding:8px 16px;
+  border:1px solid rgba(200,202,208,0.2);background:transparent;
+  color:var(--platinum);cursor:pointer;transition:all 0.2s;
+}
+.tog-btn:hover{border-color:var(--gold);color:var(--gold)}
+.tog-btn.active{background:rgba(200,168,75,0.1);border-color:var(--gold);color:var(--gold)}
+
+/* ── SPECS STRIP ── */
+#specs{
+  border-top:1px solid rgba(200,202,208,0.08);
+  padding:80px 40px;
+}
+.specs-grid{
+  max-width:1100px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:40px;
+}
+.spec-item{}
+.spec-item .spec-label{font-family:system-ui,sans-serif;font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.spec-item .spec-num{font-family:Georgia,serif;font-size:32px;color:var(--cream);letter-spacing:0.05em;font-variant-numeric:tabular-nums}
+.spec-item .spec-unit{font-family:system-ui,sans-serif;font-size:10px;color:var(--mid);letter-spacing:0.2em;text-transform:uppercase;margin-top:4px}
+
+/* ── FINALE ── */
+#finale{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:var(--void);position:relative;overflow:hidden;
+  border-top:1px solid rgba(200,202,208,0.06);
+}
+#finale-canvas{position:absolute;inset:0;width:100%;height:100%}
+.finale-content{position:relative;z-index:1;text-align:center}
+.finale-content .eyebrow{margin-bottom:24px}
+.finale-quote{
+  font-family:Georgia,serif;font-size:clamp(28px,5vw,68px);
+  color:var(--cream);font-weight:300;letter-spacing:0.08em;
+  font-style:italic;margin-bottom:40px;text-wrap:balance;
+}
+.cta-btn{
+  display:inline-block;font-family:system-ui,sans-serif;font-size:10px;
+  letter-spacing:0.35em;text-transform:uppercase;color:var(--void);
+  background:var(--cream);padding:16px 40px;cursor:pointer;
+  border:none;transition:background 0.3s;text-decoration:none;
+}
+.cta-btn:hover{background:var(--gold)}
+
+@media(prefers-reduced-motion:reduce){
+  #c,#int-c{transition:none!important}
+  .ov{transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ SCROLL EXPERIENCE ══════════════ -->
+<div id="experience">
+  <div id="canvas-wrap">
+    <canvas id="c"></canvas>
+
+    <div id="ov-intro" class="ov">
+      <div class="eyebrow">Geneva, Switzerland · Established 1847</div>
+    </div>
+    <div id="ov-count" class="ov">
+      <div class="spec-block">
+        <div class="spec-label">Components</div>
+        <div class="spec-val">312</div>
+      </div>
+      <div class="spec-block">
+        <div class="spec-label">Assembly time</div>
+        <div class="spec-val">48 hrs</div>
+      </div>
+    </div>
+    <div id="ov-calibre" class="ov">
+      <div class="spec-block" style="border-left:none;border-right:1px solid rgba(200,168,75,0.4);padding-left:0;padding-right:20px">
+        <div class="spec-label">In-House Calibre</div>
+        <div class="spec-val">CV-1847</div>
+      </div>
+      <div class="spec-block" style="border-left:none;border-right:1px solid rgba(200,168,75,0.4);padding-left:0;padding-right:20px">
+        <div class="spec-label">Frequency</div>
+        <div class="spec-val">28,800 vph</div>
+      </div>
+    </div>
+    <div id="ov-brand" class="ov">
+      <div class="eyebrow">Maison Chronovault</div>
+      <div class="display">CHRONOVAULT</div>
+      <div class="sub">Precision beyond measure</div>
+    </div>
+    <div id="ov-dial" class="ov">
+      <div class="eyebrow">Matte Black Dial · Sapphire Crystal · 904L Steel</div>
+    </div>
+    <div id="ov-reveal" class="ov">
+      <div class="eyebrow">Calibre CV-1847 · 70hr Power Reserve</div>
+      <div class="display" style="font-size:clamp(32px,5vw,64px)">CHRONOVAULT<br>SUBMARINER I</div>
+    </div>
+
+    <div id="ov-progress">
+      <span>Scroll</span>
+      <div id="ov-progress-bar"><div id="ov-progress-fill"></div></div>
+      <span id="ov-progress-pct">0%</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ INTERACTIVE ══════════════ -->
+<div id="interactive">
+  <div class="int-inner">
+    <div class="int-header">
+      <div class="eyebrow">Configure Your Timepiece</div>
+      <div class="display">EXPLORE THE WATCH</div>
+    </div>
+    <div id="int-canvas-wrap">
+      <canvas id="int-c"></canvas>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <div class="control-label">Case Finish</div>
+        <div class="swatches" id="finish-swatches">
+          <div class="swatch active" data-finish="steel" style="background:linear-gradient(135deg,#C8CAD0,#6E7278)" title="Steel"></div>
+          <div class="swatch" data-finish="titanium" style="background:linear-gradient(135deg,#9A9AA8,#5A5A68)" title="Titanium"></div>
+          <div class="swatch" data-finish="gold" style="background:linear-gradient(135deg,#E8B870,#A07030)" title="Rose Gold"></div>
+          <div class="swatch" data-finish="black" style="background:linear-gradient(135deg,#3A3A42,#0A0A12)" title="Black Ceramic"></div>
+          <div class="swatch" data-finish="platinum" style="background:linear-gradient(135deg,#E0E0E8,#A0A0B0)" title="Platinum"></div>
+        </div>
+      </div>
+      <div class="control-group">
+        <div class="control-label">Dial Color</div>
+        <div class="swatches" id="dial-swatches">
+          <div class="swatch active" data-dial="black" style="background:#080810" title="Matte Black"></div>
+          <div class="swatch" data-dial="blue" style="background:#0A1530" title="Deep Blue"></div>
+          <div class="swatch" data-dial="green" style="background:#0A2015" title="Forest Green"></div>
+          <div class="swatch" data-dial="champagne" style="background:#D8C090" title="Champagne"></div>
+        </div>
+      </div>
+      <div class="control-group">
+        <div class="control-label">View Mode</div>
+        <div class="btn-row">
+          <button class="tog-btn active" data-view="front">Front</button>
+          <button class="tog-btn" data-view="xray">X-Ray</button>
+          <button class="tog-btn" data-view="explode">Explode</button>
+          <button class="tog-btn" data-view="caseback">Caseback</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SPECS ══════════════ -->
+<div id="specs">
+  <div class="specs-grid">
+    <div class="spec-item"><div class="spec-label">Case Diameter</div><div class="spec-num">40.5</div><div class="spec-unit">Millimetres</div></div>
+    <div class="spec-item"><div class="spec-label">Case Thickness</div><div class="spec-num">12.8</div><div class="spec-unit">Millimetres</div></div>
+    <div class="spec-item"><div class="spec-label">Water Resistance</div><div class="spec-num">300</div><div class="spec-unit">Metres</div></div>
+    <div class="spec-item"><div class="spec-label">Power Reserve</div><div class="spec-num">70</div><div class="spec-unit">Hours</div></div>
+    <div class="spec-item"><div class="spec-label">Beat Rate</div><div class="spec-num">28,800</div><div class="spec-unit">Vibrations / Hour</div></div>
+    <div class="spec-item"><div class="spec-label">Jewels</div><div class="spec-num">31</div><div class="spec-unit">Ruby Bearings</div></div>
+  </div>
+</div>
+
+<!-- ══════════════ FINALE ══════════════ -->
+<div id="finale">
+  <canvas id="finale-canvas"></canvas>
+  <div class="finale-content">
+    <div class="eyebrow">Maison Chronovault · Geneva</div>
+    <div class="finale-quote">"Crafted for Generations."</div>
+    <a href="#" class="cta-btn">Discover the Collection</a>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════
+const lerp=(a,b,t)=>a+(b-a)*t;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const easeOut=(t)=>1-Math.pow(1-t,3);
+const easeInOut=(t)=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const easeOutBack=(t)=>{const c=1.70158;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2)};
+function phase(p,s,e){return easeOut(clamp((p-s)/(e-s),0,1));}
+function phaseRaw(p,s,e){return clamp((p-s)/(e-s),0,1);}
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let W,H,cx,cy,S; // canvas dimensions & scale
+let scrollP=0,time=0;
+let balDir=1,balAngle=0;
+let rotorAngle=0;
+let particles=[];
+let lastSpawnPhase={};
+
+// Interactive state
+let finish='steel',dialColor='black',viewMode='front';
+let intRotX=15,intRotY=-20;
+let dragging=false,lastMX=0,lastMY=0;
+let explodeT=0,xrayT=0,casebackT=0;
+
+// ═══════════════════════════════════════════════
+//  PARTICLE SYSTEM
+// ═══════════════════════════════════════════════
+class Spark{
+  constructor(x,y){
+    this.x=x;this.y=y;
+    this.vx=(Math.random()-.5)*5*S;
+    this.vy=(Math.random()-.5)*5*S-2*S;
+    this.life=1;this.decay=0.025+Math.random()*0.025;
+    this.r=(1+Math.random()*1.5)*S;
+    this.col=Math.random()>.5?'#C8A84B':'#E8EAEF';
+  }
+  update(){this.x+=this.vx;this.y+=this.vy;this.vy+=.15*S;this.life-=this.decay;this.vx*=.97;}
+  draw(ctx){
+    ctx.save();ctx.globalAlpha=Math.max(0,this.life);
+    ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+    ctx.fillStyle=this.col;ctx.fill();ctx.restore();
+  }
+}
+function spawnSparks(x,y,n=10){for(let i=0;i<n;i++)particles.push(new Spark(x,y));}
+function trySpawn(key,p,threshold){
+  if(!lastSpawnPhase[key]&&p>=threshold){
+    lastSpawnPhase[key]=true;
+    // approximate canvas position of component
+    const positions={
+      plate:[cx,cy],barrel:[cx-35*S,cy-20*S],cw:[cx+5*S,cy+15*S],
+      tw:[cx+32*S,cy-10*S],fw:[cx+48*S,cy+25*S],ew:[cx+35*S,cy+52*S],
+      pf:[cx+20*S,cy+45*S],bw:[cx-10*S,cy+55*S],
+      bridgeCock:[cx-8*S,cy+55*S],bridgeBrl:[cx-35*S,cy-30*S],
+      bridgeTrn:[cx+50*S,cy+10*S],rotor:[cx,cy-80*S]
+    };
+    const pos=positions[key]||[cx,cy];
+    spawnSparks(pos[0],pos[1]);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  MATERIAL HELPERS
+// ═══════════════════════════════════════════════
+function metalGrad(ctx,x,y,r,light='#D0D3DB',dark='#3A3D45'){
+  const g=ctx.createRadialGradient(x-r*.35,y-r*.35,0,x,y,r*1.2);
+  g.addColorStop(0,light);g.addColorStop(.4,'#9A9DA5');
+  g.addColorStop(.75,dark);g.addColorStop(1,'#1A1D25');return g;
+}
+function finishColors(){
+  const F={
+    steel:{light:'#D0D3DB',mid:'#9A9DA5',dark:'#4A4D55',edge:'#E8EAEF'},
+    titanium:{light:'#B0B0BE',mid:'#808090',dark:'#404050',edge:'#D0D0E0'},
+    gold:{light:'#E8C090',mid:'#C09060',dark:'#806030',edge:'#F0D0A0'},
+    black:{light:'#505060',mid:'#282832',dark:'#0A0A14',edge:'#707080'},
+    platinum:{light:'#E0E0E8',mid:'#B8B8C8',dark:'#606070',edge:'#F0F0F8'},
+  };
+  return F[finish]||F.steel;
+}
+function dialColors(){
+  const D={
+    black:{bg0:'#0D0D15',bg1:'#050508',text:'#C8CAD0'},
+    blue:{bg0:'#0E1835',bg1:'#060A18',text:'#A8C0E0'},
+    green:{bg0:'#0C2018',bg1:'#060E0A',text:'#90C0A0'},
+    champagne:{bg0:'#D8C090',bg1:'#A89060',text:'#3A2A10'},
+  };
+  return D[dialColor]||D.black;
+}
+
+// ═══════════════════════════════════════════════
+//  DRAWING: MOVEMENT COMPONENTS
+// ═══════════════════════════════════════════════
+function drawSpotlight(ctx,x,y,r,dark){
+  const g=ctx.createRadialGradient(x,y,0,x,y,r);
+  g.addColorStop(0,'rgba(0,0,0,0)');
+  g.addColorStop(.4,`rgba(0,0,0,${dark*.4})`);
+  g.addColorStop(1,`rgba(0,0,0,${dark})`);
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+}
+
+function drawBaseplate(ctx,alpha){
+  if(alpha<=0)return;
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx,cy);
+  const r=140*S;
+  // Brass/german silver plate
+  const g=ctx.createRadialGradient(0,0,r*.1,0,0,r);
+  g.addColorStop(0,'#9A8A72');g.addColorStop(.5,'#7A6A58');g.addColorStop(1,'#4A3A28');
+  ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+  // Radial brushed lines
+  ctx.globalAlpha=alpha*.1;
+  for(let a=0;a<Math.PI*2;a+=.04){
+    ctx.beginPath();ctx.moveTo(Math.cos(a)*r*.15,Math.sin(a)*r*.15);
+    ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+    ctx.strokeStyle='#C8A878';ctx.lineWidth=.5*S;ctx.stroke();
+  }
+  ctx.globalAlpha=alpha;
+  ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.strokeStyle='#C8A870';ctx.lineWidth=1.5*S;ctx.stroke();
+  // Dark cutouts showing gear train
+  ctx.fillStyle='rgba(8,6,4,0.85)';
+  [[5,15,22],[32,-10,16],[48,25,12],[35,52,11],[-10,55,20],[-35,-20,28]].forEach(([ex,ey,er])=>{
+    ctx.save();ctx.translate(ex*S,ey*S);
+    ctx.beginPath();ctx.arc(0,0,er*S*.9,0,Math.PI*2);ctx.fill();ctx.restore();
+  });
+  ctx.restore();
+}
+
+function drawGear(ctx,lx,ly,or,ir,teeth,angle,alpha){
+  if(alpha<=0)return;
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx+lx*S,cy+ly*S);ctx.rotate(angle);
+  const OR=or*S,IR=ir*S;
+  ctx.beginPath();
+  for(let i=0;i<teeth;i++){
+    const a0=(i/teeth)*Math.PI*2,step=Math.PI/teeth;
+    const a1=a0+step*.3,a2=a0+step*.9,a3=a0+step*1.1,a4=a0+step*1.7;
+    if(i===0)ctx.moveTo(Math.cos(a0)*IR,Math.sin(a0)*IR);
+    else ctx.lineTo(Math.cos(a0)*IR,Math.sin(a0)*IR);
+    ctx.lineTo(Math.cos(a1)*OR,Math.sin(a1)*OR);
+    ctx.lineTo(Math.cos(a2)*OR,Math.sin(a2)*OR);
+    ctx.lineTo(Math.cos(a3)*IR,Math.sin(a3)*IR);
+  }
+  ctx.closePath();
+  const mg=metalGrad(ctx,0,0,OR);ctx.fillStyle=mg;ctx.fill();
+  ctx.strokeStyle='#A0A3AB';ctx.lineWidth=.4*S;ctx.stroke();
+  // Spokes
+  const sp=or>14?4:3;
+  ctx.strokeStyle='#8A8D95';ctx.lineWidth=1.2*S;
+  for(let i=0;i<sp;i++){
+    const a=(i/sp)*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(Math.cos(a)*IR*.25,Math.sin(a)*IR*.25);
+    ctx.lineTo(Math.cos(a)*IR*.85,Math.sin(a)*IR*.85);ctx.stroke();
+  }
+  // Hub
+  ctx.beginPath();ctx.arc(0,0,IR*.22,0,Math.PI*2);
+  const hg=ctx.createRadialGradient(0,0,0,0,0,IR*.22);
+  hg.addColorStop(0,'#D8DADF');hg.addColorStop(1,'#3A3D45');
+  ctx.fillStyle=hg;ctx.fill();
+  ctx.restore();
+}
+
+function drawJewel(ctx,lx,ly,r,alpha){
+  if(alpha<=0)return;
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx+lx*S,cy+ly*S);
+  const pr=r*S;
+  // Gold setting
+  ctx.beginPath();ctx.arc(0,0,pr*1.5,0,Math.PI*2);
+  const gg=ctx.createRadialGradient(0,0,0,0,0,pr*1.5);
+  gg.addColorStop(0,'#F0C860');gg.addColorStop(1,'#806820');ctx.fillStyle=gg;ctx.fill();
+  // Ruby
+  ctx.beginPath();ctx.arc(0,0,pr,0,Math.PI*2);
+  const rg=ctx.createRadialGradient(-pr*.3,-pr*.3,0,0,0,pr);
+  rg.addColorStop(0,'#FF5868');rg.addColorStop(.5,'#C41E3A');rg.addColorStop(1,'#600010');
+  ctx.fillStyle=rg;ctx.fill();
+  // Highlight
+  ctx.beginPath();ctx.arc(-pr*.2,-pr*.3,pr*.3,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,180,180,.55)';ctx.fill();
+  ctx.restore();
+}
+
+function drawScrew(ctx,lx,ly,r,angle,alpha){
+  if(alpha<=0)return;
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx+lx*S,cy+ly*S);ctx.rotate(angle);
+  const pr=r*S;
+  ctx.beginPath();ctx.arc(0,0,pr,0,Math.PI*2);
+  const sg=ctx.createRadialGradient(-pr*.3,-pr*.3,0,0,0,pr);
+  sg.addColorStop(0,'#E8EAEF');sg.addColorStop(.6,'#9A9DA5');sg.addColorStop(1,'#3A3D45');
+  ctx.fillStyle=sg;ctx.fill();
+  // Slot
+  ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(-pr,-pr*.18,pr*2,pr*.36);
+  ctx.beginPath();ctx.arc(-pr*.2,-pr*.25,pr*.2,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.fill();
+  ctx.restore();
+}
+
+function drawBridge(ctx,pts,alpha,opacity=1){
+  if(alpha<=0)return;
+  ctx.save();ctx.globalAlpha=alpha*opacity;ctx.translate(cx,cy);
+  ctx.beginPath();
+  const P=pts.map(([x,y])=>[x*S,y*S]);
+  ctx.moveTo(P[0][0],P[0][1]);
+  P.slice(1).forEach(([x,y])=>ctx.lineTo(x,y));ctx.closePath();
+  const xs=P.map(p=>p[0]),ys=P.map(p=>p[1]);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const bg=ctx.createLinearGradient(x0,y0,x1,y1);
+  bg.addColorStop(0,'#D0D3DB');bg.addColorStop(.35,'#9A9DA5');bg.addColorStop(.7,'#6E7278');bg.addColorStop(1,'#3A3D45');
+  ctx.fillStyle=bg;ctx.fill();
+  ctx.strokeStyle='#C8CAD0';ctx.lineWidth=.7*S;ctx.stroke();
+  ctx.restore();
+}
+
+function drawBalanceWheel(ctx,lx,ly,r,angle,alpha){
+  if(alpha<=0)return;
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx+lx*S,cy+ly*S);ctx.rotate(angle);
+  const pr=r*S;
+  // Hairspring spiral
+  ctx.save();ctx.globalAlpha=alpha*.7;ctx.strokeStyle='#C8A84B';ctx.lineWidth=.5*S;
+  ctx.beginPath();
+  for(let i=0;i<6*Math.PI;i+=.08){
+    const sr=(i/(6*Math.PI))*pr*.55;
+    const x=Math.cos(i+angle*2)*sr,y=Math.sin(i+angle*2)*sr;
+    i<.08?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke();ctx.restore();
+  // Rim
+  ctx.beginPath();ctx.arc(0,0,pr,0,Math.PI*2);
+  ctx.strokeStyle='#C8CAD0';ctx.lineWidth=3.5*S;ctx.stroke();
+  ctx.beginPath();ctx.arc(0,0,pr*.83,0,Math.PI*2);
+  ctx.strokeStyle='rgba(200,202,208,.4)';ctx.lineWidth=.8*S;ctx.stroke();
+  // Spokes
+  ctx.strokeStyle='#A0A3AB';ctx.lineWidth=1.5*S;
+  for(let i=0;i<3;i++){
+    const a=(i/3)*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*pr*.83,Math.sin(a)*pr*.83);ctx.stroke();
+  }
+  // Hub
+  ctx.beginPath();ctx.arc(0,0,pr*.12,0,Math.PI*2);
+  const hg=ctx.createRadialGradient(0,0,0,0,0,pr*.12);
+  hg.addColorStop(0,'#E0E3EB');hg.addColorStop(1,'#5A5D65');ctx.fillStyle=hg;ctx.fill();
+  ctx.restore();
+}
+
+function drawBarrel(ctx,lx,ly,r,alpha){
+  if(alpha<=0)return;
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx+lx*S,cy+ly*S);
+  const pr=r*S;
+  ctx.beginPath();ctx.arc(0,0,pr,0,Math.PI*2);
+  const bg=ctx.createRadialGradient(-pr*.3,-pr*.2,0,0,0,pr);
+  bg.addColorStop(0,'#8A8D95');bg.addColorStop(.6,'#5A5D65');bg.addColorStop(1,'#2A2D35');
+  ctx.fillStyle=bg;ctx.fill();
+  // Ratchet teeth on edge
+  ctx.strokeStyle='#9A9DA5';ctx.lineWidth=.8*S;
+  for(let i=0;i<45;i++){
+    const a1=(i/45)*Math.PI*2,a2=((i+.5)/45)*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(Math.cos(a1)*pr*.9,Math.sin(a1)*pr*.9);
+    ctx.lineTo(Math.cos(a2)*pr,Math.sin(a2)*pr);ctx.stroke();
+  }
+  ctx.beginPath();ctx.arc(0,0,pr*.75,0,Math.PI*2);
+  const ig=ctx.createRadialGradient(0,0,0,0,0,pr*.75);
+  ig.addColorStop(0,'#7A6A58');ig.addColorStop(1,'#4A3A28');ctx.fillStyle=ig;ctx.fill();
+  ctx.save();ctx.globalAlpha=alpha*.45;ctx.fillStyle='#C8A84B';
+  ctx.font=`${5*S}px Georgia`;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('SWISS',0,-3.5*S);ctx.fillText('MADE',0,3.5*S);ctx.restore();
+  ctx.beginPath();ctx.arc(0,0,pr*.09,0,Math.PI*2);ctx.fillStyle='#C8CAD0';ctx.fill();
+  ctx.restore();
+}
+
+function drawPalletFork(ctx,lx,ly,angle,alpha){
+  if(alpha<=0)return;
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx+lx*S,cy+ly*S);ctx.rotate(angle);
+  const L=22*S,w=4*S;
+  const g=ctx.createLinearGradient(-w,0,w,0);
+  g.addColorStop(0,'#6E7278');g.addColorStop(.5,'#C8CAD0');g.addColorStop(1,'#6E7278');
+  ctx.fillStyle=g;
+  // Stem
+  ctx.fillRect(-w/2,-L,w,L+w);
+  // Left pallet
+  ctx.save();ctx.translate(-w*3,-L);ctx.rotate(-.4);
+  ctx.fillRect(-w*.4,-L*.35,w*.8,L*.35);ctx.restore();
+  // Right pallet
+  ctx.save();ctx.translate(w*3,-L);ctx.rotate(.4);
+  ctx.fillRect(-w*.4,-L*.35,w*.8,L*.35);ctx.restore();
+  // Pivot
+  ctx.beginPath();ctx.arc(0,0,2.5*S,0,Math.PI*2);
+  ctx.fillStyle='#E0E3EB';ctx.fill();
+  ctx.restore();
+}
+
+function drawRotor(ctx,angle,alpha){
+  if(alpha<=0)return;
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx,cy);ctx.rotate(angle);
+  // Semicircle weight
+  ctx.beginPath();ctx.arc(0,0,90*S,-.15,Math.PI+.15);ctx.closePath();
+  const rg=ctx.createRadialGradient(0,-45*S,0,0,0,90*S);
+  rg.addColorStop(0,'#5A5D65');rg.addColorStop(.4,'#1A1D25');rg.addColorStop(.7,'#C8A84B');rg.addColorStop(1,'#806820');
+  ctx.fillStyle=rg;ctx.fill();
+  ctx.strokeStyle='#9A9DA5';ctx.lineWidth=1*S;ctx.stroke();
+  // Arm spokes
+  ctx.strokeStyle='#8A8D95';ctx.lineWidth=2*S;
+  [[0,0,30*S,0],[0,0,-30*S,0]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  });
+  ctx.beginPath();ctx.arc(0,0,10*S,0,Math.PI*2);
+  const hg=ctx.createRadialGradient(0,0,0,0,0,10*S);
+  hg.addColorStop(0,'#D8DADF');hg.addColorStop(1,'#5A5D65');ctx.fillStyle=hg;ctx.fill();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════
+//  DRAWING: ASSEMBLED WATCH
+// ═══════════════════════════════════════════════
+function drawWatch(ctx,alpha,dialPhase,s,options={}){
+  // options: finish colors, dial colors, xray, explode amounts
+  const {xray=0,explode=0,caseback=0}=options;
+  if(alpha<=0)return;
+  const FC=finishColors();
+  const DC=dialColors();
+  const CS=s||S; // component scale
+
+  ctx.save();
+  ctx.translate(cx,cy);
+
+  const caseR=155*CS,bezelR=138*CS,dialR=116*CS,crysR=118*CS;
+
+  // ── LUGS ──
+  ctx.globalAlpha=alpha;
+  function lug(x1,y1,x2,y2,w){
+    const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+    const nx=-dy/len*w/2,ny=dx/len*w/2;
+    ctx.beginPath();
+    ctx.moveTo(x1+nx,y1+ny);ctx.lineTo(x2+nx*.7,y2+ny*.7);
+    ctx.lineTo(x2-nx*.7,y2-ny*.7);ctx.lineTo(x1-nx,y1-ny);ctx.closePath();
+    const gg=ctx.createLinearGradient(x1+nx,y1,x1-nx,y1);
+    gg.addColorStop(0,FC.light);gg.addColorStop(.5,FC.mid);gg.addColorStop(1,FC.dark);
+    ctx.fillStyle=gg;ctx.fill();
+    ctx.strokeStyle=FC.edge;ctx.lineWidth=.5*CS;ctx.stroke();
+  }
+  // Top lugs
+  lug(-16*CS,-caseR*.92,-14*CS,-caseR-50*CS,16*CS);
+  lug(16*CS,-caseR*.92,14*CS,-caseR-50*CS,16*CS);
+  // Bottom lugs
+  lug(-16*CS,caseR*.92,-14*CS,caseR+50*CS,16*CS);
+  lug(16*CS,caseR*.92,14*CS,caseR+50*CS,16*CS);
+
+  // Bracelet links (bottom)
+  const linkCount=5;
+  for(let i=0;i<linkCount;i++){
+    const yBase=caseR+52*CS+(i*22*CS);
+    const spread=lerp(16,12,i/linkCount)*CS;
+    // Outer links
+    [-1,1].forEach(side=>{
+      ctx.save();ctx.translate(side*spread*1.3,yBase);
+      const lg=ctx.createLinearGradient(-8*CS,0,8*CS,0);
+      lg.addColorStop(0,FC.dark);lg.addColorStop(.5,FC.mid);lg.addColorStop(1,FC.dark);
+      ctx.fillStyle=lg;ctx.beginPath();
+      ctx.roundRect(-8*CS,-10*CS,16*CS,20*CS,2*CS);ctx.fill();ctx.restore();
+    });
+    // Center link
+    ctx.save();ctx.translate(0,yBase);
+    const clg=ctx.createLinearGradient(0,-10*CS,0,10*CS);
+    clg.addColorStop(0,FC.light);clg.addColorStop(.5,FC.mid);clg.addColorStop(1,FC.dark);
+    ctx.fillStyle=clg;ctx.beginPath();
+    ctx.roundRect(-11*CS,-10*CS,22*CS,20*CS,2*CS);ctx.fill();ctx.restore();
+  }
+  // Clasp
+  ctx.save();ctx.translate(0,caseR+52*CS+linkCount*22*CS);
+  const claspG=ctx.createLinearGradient(-25*CS,0,25*CS,0);
+  claspG.addColorStop(0,FC.dark);claspG.addColorStop(.5,FC.light);claspG.addColorStop(1,FC.dark);
+  ctx.fillStyle=claspG;ctx.fillRect(-26*CS,-8*CS,52*CS,16*CS);
+  ctx.strokeStyle=FC.mid;ctx.lineWidth=.5*CS;ctx.strokeRect(-26*CS,-8*CS,52*CS,16*CS);
+  ctx.fillStyle=FC.mid;ctx.fillRect(-5*CS,-8*CS,10*CS,16*CS); // clasp fold indicator
+  ctx.restore();
+
+  // ── CASE ──
+  ctx.beginPath();ctx.arc(0,0,caseR,0,Math.PI*2);
+  const cg=ctx.createRadialGradient(-caseR*.35,-caseR*.35,0,0,0,caseR*1.1);
+  cg.addColorStop(0,FC.light);cg.addColorStop(.3,FC.mid);cg.addColorStop(.6,FC.dark);
+  cg.addColorStop(.75,FC.edge);cg.addColorStop(.9,FC.mid);cg.addColorStop(1,FC.dark);
+  ctx.fillStyle=cg;ctx.fill();
+  ctx.strokeStyle=FC.edge;ctx.lineWidth=2*CS;ctx.stroke();
+
+  // Crown guards
+  ctx.save();ctx.translate(caseR*.94,0);
+  const guard=[[-4*CS,-20*CS],[4*CS,-20*CS],[6*CS,-14*CS],[6*CS,14*CS],[4*CS,20*CS],[-4*CS,20*CS]];
+  ctx.beginPath();ctx.moveTo(guard[0][0],guard[0][1]);
+  guard.forEach(([x,y])=>ctx.lineTo(x,y));ctx.closePath();
+  ctx.fillStyle=FC.mid;ctx.fill();ctx.restore();
+
+  // Crown
+  ctx.save();ctx.translate(caseR+18*CS,0);
+  const crg=ctx.createLinearGradient(0,-10*CS,0,10*CS);
+  crg.addColorStop(0,FC.light);crg.addColorStop(.5,FC.mid);crg.addColorStop(1,FC.dark);
+  ctx.fillStyle=crg;ctx.beginPath();ctx.roundRect(-2*CS,-11*CS,18*CS,22*CS,4*CS);ctx.fill();
+  // Knurling
+  for(let i=0;i<10;i++){
+    const y=lerp(-10*CS,10*CS,i/9);
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(14*CS,y);
+    ctx.strokeStyle=i%2===0?FC.dark:FC.light;ctx.lineWidth=.8*CS;ctx.stroke();
+  }
+  ctx.restore();
+
+  // ── BEZEL ──
+  const bezelA=phase(dialPhase,0,1);
+  if(bezelA>0){
+    ctx.globalAlpha=alpha*bezelA;
+    ctx.beginPath();ctx.arc(0,0,bezelR,0,Math.PI*2);
+    ctx.fillStyle='#0A0A14';ctx.fill();
+    // Minute markers
+    for(let i=0;i<60;i++){
+      const a=(i/60)*Math.PI*2-Math.PI/2;
+      const isH=i%5===0;
+      const R=bezelR*.87,len=isH?9*CS:4*CS,wid=isH?1.8*CS:.9*CS;
+      ctx.save();ctx.translate(Math.cos(a)*R,Math.sin(a)*R);ctx.rotate(a+Math.PI/2);
+      ctx.fillStyle=i===0?'#F0D060':'#C8CAD0';ctx.fillRect(-wid/2,-len/2,wid,len);
+      ctx.restore();
+    }
+    // Triangle pip at 12
+    ctx.save();ctx.translate(0,-bezelR*.76);
+    ctx.fillStyle='#F0D060';ctx.beginPath();
+    ctx.moveTo(0,-5*CS);ctx.lineTo(4*CS,5*CS);ctx.lineTo(-4*CS,5*CS);ctx.closePath();ctx.fill();
+    ctx.restore();
+    // Knurling on edge
+    for(let i=0;i<200;i++){
+      const a=(i/200)*Math.PI*2;
+      ctx.beginPath();ctx.moveTo(Math.cos(a)*bezelR*.98,Math.sin(a)*bezelR*.98);
+      ctx.lineTo(Math.cos(a)*caseR*.975,Math.sin(a)*caseR*.975);
+      ctx.strokeStyle=i%2===0?'#3A3D45':'#1A1A22';ctx.lineWidth=.7*CS;ctx.stroke();
+    }
+    ctx.globalAlpha=alpha;
+  }
+
+  // ── DIAL ──
+  const dialA=phase(dialPhase,0.05,0.9);
+  if(dialA>0){
+    ctx.globalAlpha=alpha*dialA;
+    ctx.beginPath();ctx.arc(0,0,dialR,0,Math.PI*2);
+    const dg=ctx.createRadialGradient(0,0,0,0,0,dialR);
+    dg.addColorStop(0,DC.bg0);dg.addColorStop(.8,DC.bg0);dg.addColorStop(1,DC.bg1);
+    ctx.fillStyle=dg;ctx.fill();
+
+    // Applied indices
+    const lumeC=dialColor==='champagne'?'#80604090':'rgba(184,212,255,.9)';
+    const lumeGlow=dialColor==='champagne'?'#C0A060':'#90B8FF';
+    const indAlpha=phase(dialPhase,.2,1);
+    ctx.globalAlpha=alpha*dialA*indAlpha;
+
+    for(let h=1;h<=12;h++){
+      const a=(h/12)*Math.PI*2-Math.PI/2;
+      const R=dialR*.8,x=Math.cos(a)*R,y=Math.sin(a)*R;
+      ctx.save();ctx.translate(x,y);ctx.rotate(a+Math.PI/2);
+      ctx.shadowColor=lumeGlow;ctx.shadowBlur=8*CS;ctx.fillStyle=lumeC;
+      if(h===12){
+        ctx.beginPath();ctx.moveTo(0,-8*CS);ctx.lineTo(4.5*CS,6*CS);ctx.lineTo(-4.5*CS,6*CS);ctx.closePath();ctx.fill();
+        ctx.shadowBlur=0;ctx.strokeStyle='#9A9DA5';ctx.lineWidth=.7*CS;
+        ctx.beginPath();ctx.moveTo(0,-8.5*CS);ctx.lineTo(5*CS,6.5*CS);ctx.lineTo(-5*CS,6.5*CS);ctx.closePath();ctx.stroke();
+      } else if(h===3||h===9){
+        ctx.fillRect(-4.5*CS,-8*CS,9*CS,16*CS);
+        ctx.shadowBlur=0;ctx.strokeStyle='#9A9DA5';ctx.lineWidth=.7*CS;ctx.strokeRect(-5*CS,-8.5*CS,10*CS,17*CS);
+      } else if(h===6){
+        ctx.fillRect(-4.5*CS,-8*CS,9*CS,16*CS);
+        ctx.shadowBlur=0;ctx.strokeStyle='#9A9DA5';ctx.lineWidth=.7*CS;ctx.strokeRect(-5*CS,-8.5*CS,10*CS,17*CS);
+      } else {
+        ctx.fillRect(-3*CS,-6.5*CS,6*CS,13*CS);
+        ctx.shadowBlur=0;ctx.strokeStyle='#9A9DA5';ctx.lineWidth=.6*CS;ctx.strokeRect(-3.5*CS,-7*CS,7*CS,14*CS);
+      }
+      ctx.restore();
+    }
+
+    // "CHRONOVAULT" brand text
+    ctx.globalAlpha=alpha*dialA;ctx.shadowBlur=0;
+    ctx.fillStyle=DC.text;ctx.font=`${5.5*CS}px Georgia`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.globalAlpha=alpha*dialA*.7;
+    ctx.fillText('CHRONOVAULT',0,-dialR*.36);
+    ctx.font=`${3.5*CS}px system-ui`;ctx.fillStyle='rgba(200,202,208,.45)';
+    ctx.fillText('GENÈVE · SWISS MADE',0,-dialR*.26);
+
+    // Date window at 3
+    ctx.globalAlpha=alpha*dialA;
+    const dX=dialR*.62,dY=0;
+    ctx.save();ctx.translate(dX,dY);
+    ctx.fillStyle='#F5F5F5';ctx.strokeStyle='#9A9DA5';ctx.lineWidth=.5*CS;
+    ctx.fillRect(-9*CS,-6*CS,18*CS,12*CS);ctx.strokeRect(-9*CS,-6*CS,18*CS,12*CS);
+    ctx.fillStyle='#1A1A22';ctx.font=`bold ${8*CS}px Georgia`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('28',0,.5*CS);ctx.restore();
+
+    // Hands
+    const handsA=phase(dialPhase,.5,1);
+    ctx.globalAlpha=alpha*dialA*handsA;
+    const now=new Date();
+    const s60=now.getSeconds()+now.getMilliseconds()/1000;
+    const m60=now.getMinutes()+s60/60;
+    const h12=now.getHours()%12+m60/60;
+    const sA=s60/60*Math.PI*2-Math.PI/2;
+    const mA=m60/60*Math.PI*2-Math.PI/2;
+    const hA=h12/12*Math.PI*2-Math.PI/2;
+
+    // Hour hand (Mercedes-style)
+    function hand(angle,len,tail,w,lume){
+      ctx.save();ctx.rotate(angle);
+      ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=6*CS;
+      ctx.fillStyle='#E8EAEF';
+      ctx.beginPath();ctx.moveTo(-w/2,tail);ctx.lineTo(-w/2,-len*.55);
+      ctx.lineTo(-w*1.6,-len*.68);ctx.arc(0,-len*.82,w*1.6,Math.PI,0);
+      ctx.lineTo(w*1.6,-len*.68);ctx.lineTo(w/2,-len*.55);ctx.lineTo(w/2,tail);ctx.closePath();ctx.fill();
+      if(lume){ctx.shadowBlur=0;ctx.fillStyle='rgba(184,212,255,.65)';
+        ctx.fillRect(-w/2+.8*CS,-len*.52,w-1.6*CS,len*.44);}
+      ctx.restore();
+    }
+    // Minute hand (sword)
+    function minuteH(angle,len,tail,w){
+      ctx.save();ctx.rotate(angle);
+      ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=6*CS;
+      ctx.fillStyle='#E8EAEF';
+      ctx.beginPath();ctx.moveTo(-w/2,tail);ctx.lineTo(-w/3,-len*.7);
+      ctx.lineTo(0,-len);ctx.lineTo(w/3,-len*.7);ctx.lineTo(w/2,tail);ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(184,212,255,.6)';ctx.fillRect(-w/2+.8*CS,-len*.66,w-1.6*CS,len*.6);
+      ctx.restore();
+    }
+
+    hand(hA,dialR*.52,dialR*.1,5*CS,true);
+    minuteH(mA,dialR*.85,dialR*.1,3.5*CS);
+
+    // Seconds hand
+    ctx.save();ctx.rotate(sA);
+    ctx.strokeStyle='#DD2020';ctx.lineWidth=1.2*CS;
+    ctx.shadowColor='rgba(180,0,0,.4)';ctx.shadowBlur=4*CS;
+    ctx.beginPath();ctx.moveTo(0,dialR*.18);ctx.lineTo(0,-dialR*.88);ctx.stroke();
+    ctx.beginPath();ctx.arc(0,-dialR*.72,3.5*CS,0,Math.PI*2);
+    ctx.fillStyle='rgba(184,212,255,.9)';ctx.shadowColor='#90B8FF';ctx.shadowBlur=6*CS;ctx.fill();
+    ctx.beginPath();ctx.arc(0,dialR*.12,5*CS,0,Math.PI*2);
+    ctx.fillStyle='#DD2020';ctx.shadowBlur=0;ctx.fill();
+    ctx.restore();
+
+    // Center cap
+    ctx.globalAlpha=alpha*dialA;ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(0,0,5.5*CS,0,Math.PI*2);
+    const capG=ctx.createRadialGradient(0,0,0,0,0,5.5*CS);
+    capG.addColorStop(0,'#E8EAEF');capG.addColorStop(1,'#4A4D55');ctx.fillStyle=capG;ctx.fill();
+  }
+
+  // ── CRYSTAL ──
+  const crystA=phase(dialPhase,.6,1);
+  if(crystA>0){
+    ctx.globalAlpha=alpha*crystA;
+    ctx.beginPath();ctx.arc(0,0,crysR,0,Math.PI*2);
+    // X-ray tint
+    const xrayTint=xray>0?`rgba(60,120,255,${xray*.12})`:'rgba(160,180,255,.025)';
+    ctx.fillStyle=xrayTint;ctx.fill();
+    ctx.save();ctx.beginPath();ctx.arc(0,0,crysR,0,Math.PI*2);ctx.clip();
+    // Primary reflection
+    const refG=ctx.createLinearGradient(-crysR,-crysR,crysR*.4,crysR*.4);
+    refG.addColorStop(0,`rgba(255,255,255,${.14+crystA*.04})`);
+    refG.addColorStop(.45,'rgba(255,255,255,.03)');
+    refG.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=refG;ctx.fillRect(-crysR,-crysR,crysR*2,crysR*2);
+    ctx.restore();
+    // Edge ring highlight
+    ctx.beginPath();ctx.arc(0,0,crysR,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(255,255,255,${.3*crystA})`;ctx.lineWidth=2*CS;ctx.stroke();
+    // X-ray movement overlay
+    if(xray>0){
+      ctx.save();ctx.globalAlpha=xray*.6;
+      drawMovementXRay(ctx,CS);
+      ctx.restore();
+    }
+    ctx.globalAlpha=alpha;
+  }
+
+  ctx.restore();
+}
+
+function drawMovementXRay(ctx,CS){
+  // Simplified blue-tinted movement visible through crystal
+  ctx.strokeStyle='rgba(100,180,255,.6)';ctx.lineWidth=.6*CS;
+  [[5,15,22],[32,-10,16],[48,25,12],[35,52,11],[-10,55,20]].forEach(([lx,ly,r])=>{
+    ctx.save();ctx.translate(lx*CS,ly*CS);
+    ctx.beginPath();ctx.arc(0,0,r*CS,0,Math.PI*2);ctx.stroke();ctx.restore();
+  });
+  ctx.beginPath();ctx.arc(-10*CS,55*CS,20*CS,0,Math.PI*2);ctx.strokeStyle='rgba(150,200,255,.4)';ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════
+//  MAIN SCROLL CANVAS
+// ═══════════════════════════════════════════════
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+
+function resize(){
+  const wrap=document.getElementById('canvas-wrap');
+  W=canvas.width=wrap.offsetWidth*devicePixelRatio;
+  H=canvas.height=wrap.offsetHeight*devicePixelRatio;
+  canvas.style.width=wrap.offsetWidth+'px';
+  canvas.style.height=wrap.offsetHeight+'px';
+  cx=W/2;cy=H/2;S=Math.min(W,H)/820;
+}
+window.addEventListener('resize',()=>{resize();});
+resize();
+
+// ═══════════════════════════════════════════════
+//  TEXT OVERLAY MANAGEMENT
+// ═══════════════════════════════════════════════
+function setOverlay(id,show){
+  const el=document.getElementById(id);
+  if(el){show?el.classList.add('show'):el.classList.remove('show');}
+}
+
+// ═══════════════════════════════════════════════
+//  MAIN RENDER LOOP
+// ═══════════════════════════════════════════════
+let lastTime=0;
+function render(ts){
+  requestAnimationFrame(render);
+  const dt=Math.min((ts-lastTime)/1000,.05);lastTime=ts;time+=dt;
+
+  // Scroll progress
+  const exp=document.getElementById('experience');
+  const maxScroll=exp.offsetHeight-window.innerHeight;
+  scrollP=maxScroll>0?clamp(window.scrollY/maxScroll,0,1):0;
+  const p=scrollP;
+
+  // Update progress indicator
+  document.getElementById('ov-progress-fill').style.width=(p*100)+'%';
+  document.getElementById('ov-progress-pct').textContent=Math.round(p*100)+'%';
+
+  // Balance wheel
+  balAngle+=.07*balDir;
+  if(Math.abs(balAngle)>1.3)balDir*=-1;
+  rotorAngle+=.008;
+
+  // Gear rotation speed (follows phase)
+  const gearSpeed=lerp(.005,.03,phase(p,0.10,0.35));
+
+  // ── CLEAR ──
+  ctx.fillStyle='#050508';ctx.fillRect(0,0,W,H);
+
+  // ── PHASE 0: Darkness → spotlight ──
+  if(p<0.06){
+    const t=p/0.06;
+    const sR=50*S*t;
+    if(t>.1){
+      // Single screw rotating in
+      const screwA=easeOutBack(clamp((t-.1)/.9,0,1));
+      drawScrew(ctx,0,0,6*screwA,time*8*(1-screwA),screwA);
+    }
+    drawSpotlight(ctx,cx,cy,Math.max(sR,1),lerp(1,.88,t));
+    setOverlay('ov-intro',t>.7);
+    return;
+  }
+
+  // Spotlight grows and fades out by p=0.5
+  const spotR=lerp(60,Math.max(W,H)*.8,phase(p,0.06,0.48))*S;
+  const spotDark=lerp(.88,0,phase(p,0.08,0.50));
+
+  // ── PHASE 1: Movement assembly (p 0.06 → 0.45) ──
+  const movAlpha=1-phase(p,0.52,0.60); // fade out as watch comes in
+
+  if(movAlpha>0){
+    const movScale=lerp(.7,1,easeOutBack(phase(p,0.06,0.18)));
+    ctx.save();
+    ctx.translate(cx,cy);ctx.scale(movScale,movScale);ctx.translate(-cx,-cy);
+
+    drawBaseplate(ctx,phase(p,0.06,0.12)*movAlpha);
+    trySpawn('plate',p,0.12);
+
+    drawBarrel(ctx,-35,-20,28,phase(p,0.13,0.17)*movAlpha);
+    trySpawn('barrel',p,0.17);
+
+    const gA=time*8+p*80;
+    drawGear(ctx,5,15,22,16,20,gA*.8,phase(p,0.18,0.21)*movAlpha);
+    trySpawn('cw',p,0.21);
+    drawGear(ctx,32,-10,16,12,18,-gA*1.2,phase(p,0.21,0.24)*movAlpha);
+    trySpawn('tw',p,0.24);
+    drawGear(ctx,48,25,12,9,15,gA*1.8,phase(p,0.23,0.26)*movAlpha);
+    trySpawn('fw',p,0.26);
+    drawGear(ctx,35,52,11,8,21,-gA*2.8,phase(p,0.25,0.27)*movAlpha,true);
+    trySpawn('ew',p,0.27);
+
+    const pfOsc=Math.sin(time*8)*.28;
+    drawPalletFork(ctx,20,45,pfOsc,phase(p,0.27,0.29)*movAlpha);
+    trySpawn('pf',p,0.29);
+
+    drawBalanceWheel(ctx,-10,55,20,balAngle,phase(p,0.29,0.32)*movAlpha);
+    trySpawn('bw',p,0.32);
+
+    // Jewels
+    [[5,15,3,.21],[32,-10,2.5,.22],[48,25,2,.24],[35,52,2,.25],[-10,55,3,.30],[20,45,2,.28],[-35,-20,3.5,.18]].forEach(([lx,ly,r,start])=>{
+      drawJewel(ctx,lx,ly,r,phase(p,start,start+.02)*movAlpha);
+    });
+
+    // Screws
+    [[-70,-80,4,.16],[70,-80,4,.16],[-80,50,4,.17],[80,50,4,.17],
+     [0,-100,4,.30],[-100,0,4,.31],[100,0,4,.31],[0,100,4,.32],
+     [-60,80,3.5,.33],[60,80,3.5,.33],[40,-60,3,.34],[-40,-60,3,.34]].forEach(([lx,ly,r,start])=>{
+      const a=phase(p,start,start+.025);
+      const rot=a<1?time*6*(1-a):Math.PI*.25; // spins then locks
+      drawScrew(ctx,lx,ly,r,rot,a*movAlpha);
+    });
+
+    // Bridges appear
+    drawBridge(ctx,[[-38,32],[-5,28],[22,31],[30,40],[18,82],[-8,85],[-38,77]],phase(p,.31,.35)*movAlpha,.9);
+    trySpawn('bridgeCock',p,.35);
+    drawBridge(ctx,[[-68,-58],[-8,-58],[-4,-46],[-16,-8],[-68,-8]],phase(p,.33,.37)*movAlpha,.82);
+    trySpawn('bridgeBrl',p,.37);
+    drawBridge(ctx,[[2,-48],[72,-36],[88,32],[68,72],[12,72],[0,52],[12,2]],phase(p,.35,.39)*movAlpha,.78);
+    trySpawn('bridgeTrn',p,.39);
+
+    // Rotor
+    drawRotor(ctx,rotorAngle,phase(p,.38,.42)*movAlpha);
+    trySpawn('rotor',p,.42);
+
+    ctx.restore();
+  }
+
+  // ── PHASE 2: Brand story (p 0.42→0.58) ──
+  setOverlay('ov-intro',p<.12);
+  setOverlay('ov-count',p>.22&&p<.42);
+  setOverlay('ov-calibre',p>.28&&p<.42);
+  setOverlay('ov-brand',p>.44&&p<.58);
+
+  // ── PHASE 3: Dial & assembly descend (p 0.54→0.82) ──
+  if(p>.54){
+    const watchProgress=phase(p,.54,.82);
+    const dropY=lerp(-H*.55,0,easeOut(phase(p,.54,.68)));
+
+    ctx.save();ctx.translate(0,dropY);
+    drawWatch(ctx,watchProgress,watchProgress,S,{xray:0,explode:0,caseback:0});
+    ctx.restore();
+
+    setOverlay('ov-dial',p>.65&&p<.80);
+  }
+
+  // ── PHASE 4: Final reveal (p 0.82→1.0) ──
+  if(p>.80){
+    setOverlay('ov-reveal',p>.88);
+    const revealT=phase(p,.80,.95);
+    // Slow Y rotation via CSS transform
+    const rotDeg=lerp(0,-22,easeInOut(revealT));
+    canvas.style.transform=`rotateX(8deg) rotateY(${rotDeg}deg)`;
+  } else {
+    // In assembly phases: subtle perspective tilt
+    const tiltX=lerp(0,12,phase(p,.44,.58));
+    const tiltY=lerp(0,-18,phase(p,.44,.58));
+    const untiltX=lerp(12,0,phase(p,.58,.70));
+    const untiltY=lerp(-18,0,phase(p,.58,.70));
+    canvas.style.transform=`rotateX(${p<.58?tiltX:untiltX}deg) rotateY(${p<.58?tiltY:untiltY}deg)`;
+  }
+
+  // Spotlight overlay
+  if(spotDark>0.01)drawSpotlight(ctx,cx,cy,spotR,spotDark);
+
+  // Particles
+  particles=particles.filter(pk=>pk.life>0);
+  particles.forEach(pk=>{pk.update();pk.draw(ctx);});
+}
+requestAnimationFrame(render);
+
+// ═══════════════════════════════════════════════
+//  INTERACTIVE CANVAS
+// ═══════════════════════════════════════════════
+const intCanvas=document.getElementById('int-c');
+const ictx=intCanvas.getContext('2d');
+let iW,iH,iCX,iCY,iS;
+let autoRotY=0,autoRotRunning=true;
+
+function resizeInt(){
+  const wrap=document.getElementById('int-canvas-wrap');
+  iW=intCanvas.width=wrap.offsetWidth*devicePixelRatio;
+  iH=intCanvas.height=wrap.offsetHeight*devicePixelRatio;
+  intCanvas.style.width=wrap.offsetWidth+'px';
+  intCanvas.style.height=wrap.offsetHeight+'px';
+  iCX=iW/2;iCY=iH/2;iS=Math.min(iW,iH)/820;
+}
+resizeInt();
+window.addEventListener('resize',resizeInt);
+
+// Dragging
+const wrap=document.getElementById('int-canvas-wrap');
+wrap.addEventListener('mousedown',e=>{dragging=true;autoRotRunning=false;lastMX=e.clientX;lastMY=e.clientY;});
+window.addEventListener('mousemove',e=>{
+  if(!dragging)return;
+  intRotY+=(e.clientX-lastMX)*.4;
+  intRotX-=(e.clientY-lastMY)*.4;
+  intRotX=clamp(intRotX,-45,45);
+  lastMX=e.clientX;lastMY=e.clientY;
+});
+window.addEventListener('mouseup',()=>{dragging=false;});
+wrap.addEventListener('touchstart',e=>{e.preventDefault();dragging=true;autoRotRunning=false;lastMX=e.touches[0].clientX;lastMY=e.touches[0].clientY;},{passive:false});
+wrap.addEventListener('touchmove',e=>{e.preventDefault();
+  intRotY+=(e.touches[0].clientX-lastMX)*.4;
+  intRotX-=(e.touches[0].clientY-lastMY)*.4;
+  intRotX=clamp(intRotX,-45,45);
+  lastMX=e.touches[0].clientX;lastMY=e.touches[0].clientY;},{passive:false});
+wrap.addEventListener('touchend',()=>{dragging=false;});
+
+// Controls
+document.getElementById('finish-swatches').querySelectorAll('.swatch').forEach(sw=>{
+  sw.addEventListener('click',()=>{
+    finish=sw.dataset.finish;
+    document.querySelectorAll('#finish-swatches .swatch').forEach(s=>s.classList.remove('active'));
+    sw.classList.add('active');
+  });
+});
+document.getElementById('dial-swatches').querySelectorAll('.swatch').forEach(sw=>{
+  sw.addEventListener('click',()=>{
+    dialColor=sw.dataset.dial;
+    document.querySelectorAll('#dial-swatches .swatch').forEach(s=>s.classList.remove('active'));
+    sw.classList.add('active');
+  });
+});
+document.querySelectorAll('[data-view]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    viewMode=btn.dataset.view;
+    document.querySelectorAll('[data-view]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+function renderInteractive(ts){
+  requestAnimationFrame(renderInteractive);
+  if(autoRotRunning)autoRotY+=.3;
+
+  const totalRotY=autoRotY+intRotY;
+
+  // Animate view mode transitions
+  const targetXray=viewMode==='xray'?1:0;
+  const targetExplode=viewMode==='explode'?1:0;
+  const targetCaseback=viewMode==='caseback'?1:0;
+  xrayT=lerp(xrayT,targetXray,.05);
+  explodeT=lerp(explodeT,targetExplode,.05);
+  casebackT=lerp(casebackT,targetCaseback,.05);
+
+  intCanvas.style.transform=`rotateX(${intRotX}deg) rotateY(${totalRotY}deg)`;
+
+  ictx.fillStyle='#0D0D14';ictx.fillRect(0,0,iW,iH);
+
+  // Subtle radial light
+  const lG=ictx.createRadialGradient(iCX,iCY,0,iCX,iCY,iW*.5);
+  lG.addColorStop(0,'rgba(200,202,208,.04)');lG.addColorStop(1,'rgba(0,0,0,0)');
+  ictx.fillStyle=lG;ictx.fillRect(0,0,iW,iH);
+
+  // Explode: offset component draw positions
+  const oldCX=cx,oldCY=cy,oldS=S;
+  cx=iCX;cy=iCY;S=iS;
+
+  if(viewMode==='caseback'||casebackT>.1){
+    drawCaseback(ictx,1,iS);
+  } else {
+    // Draw complete watch with options
+    drawWatch(ictx,1,1,iS,{xray:xrayT,explode:explodeT,caseback:casebackT});
+
+    // Explode mode: additionally draw movement components floating apart
+    if(explodeT>.05){
+      const eA=explodeT;
+      const drift=50*iS*eA;
+      cx=iCX;cy=iCY;
+      ictx.save();ictx.translate(0,-drift*1.5*eA);
+      drawRotor(ictx,rotorAngle,eA*.7);ictx.restore();
+      ictx.save();ictx.translate(drift*.8*eA,drift*.5*eA);
+      drawGear(ictx,5,15,22,16,20,time*4,eA*.8);ictx.restore();
+      ictx.save();ictx.translate(drift*1.2*eA,-drift*.3*eA);
+      drawBalanceWheel(ictx,-10,55,20,balAngle,eA*.8);ictx.restore();
+    }
+  }
+
+  cx=oldCX;cy=oldCY;S=oldS;
+}
+requestAnimationFrame(renderInteractive);
+
+function drawCaseback(ctx,alpha,cs){
+  const CX=iCX,CY=iCY;
+  ctx.save();ctx.translate(CX,CY);
+  const FC=finishColors();
+  const caseR=155*cs,innerR=130*cs;
+
+  // Case
+  ctx.beginPath();ctx.arc(0,0,caseR,0,Math.PI*2);
+  const cg=ctx.createRadialGradient(-caseR*.3,-caseR*.3,0,0,0,caseR*1.1);
+  cg.addColorStop(0,FC.light);cg.addColorStop(.4,FC.mid);cg.addColorStop(.8,FC.dark);cg.addColorStop(1,FC.dark);
+  ctx.fillStyle=cg;ctx.fill();
+  ctx.strokeStyle=FC.edge;ctx.lineWidth=2*cs;ctx.stroke();
+
+  // Screwback ring
+  ctx.beginPath();ctx.arc(0,0,innerR,0,Math.PI*2);
+  const sg=ctx.createRadialGradient(0,0,innerR*.2,0,0,innerR);
+  sg.addColorStop(0,'#9A8A72');sg.addColorStop(.7,'#6A5A48');sg.addColorStop(1,'#3A2A18');
+  ctx.fillStyle=sg;ctx.fill();ctx.strokeStyle='#9A8A72';ctx.lineWidth=1.5*cs;ctx.stroke();
+
+  // Notches for caseback tool
+  for(let i=0;i<6;i++){
+    const a=(i/6)*Math.PI*2;
+    ctx.save();ctx.translate(Math.cos(a)*innerR*.93,Math.sin(a)*innerR*.93);ctx.rotate(a);
+    ctx.fillStyle='#1A1508';ctx.fillRect(-3*cs,-2*cs,6*cs,4*cs);ctx.restore();
+  }
+
+  // Rotor visible through display (simulated)
+  ctx.save();ctx.globalAlpha=.8;
+  ctx.beginPath();ctx.arc(0,0,innerR*.75,0,Math.PI*2);
+  ctx.fillStyle='rgba(8,6,4,.6)';ctx.fill();
+  const oldCX=cx,oldCY=cy,oldS=S;
+  cx=CX;cy=CY;S=cs;
+  drawRotor(ctx,rotorAngle,.9);
+  drawBalanceWheel(ctx,-10,55,20,balAngle,.7);
+  drawGear(ctx,5,15,22,16,20,time*4,.7);
+  cx=oldCX;cy=oldCY;S=oldS;
+  ctx.restore();
+
+  // "SWISS MADE AUTOMATIC" engraving
+  ctx.fillStyle='rgba(200,168,75,.7)';ctx.font=`${7*cs}px Georgia`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('CHRONOVAULT',0,-innerR*.35);
+  ctx.font=`${5*cs}px system-ui`;ctx.fillStyle='rgba(200,202,208,.5)';
+  ctx.fillText('AUTOMATIC · SWISS MADE',0,-innerR*.22);
+  ctx.font=`${4*cs}px system-ui`;
+  ctx.fillText('CAL. CV-1847 · 28,800 VPH',0,innerR*.3);
+  ctx.fillText('N° 004729',0,innerR*.42);
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════
+//  FINALE CANVAS
+// ═══════════════════════════════════════════════
+const finCanvas=document.getElementById('finale-canvas');
+const fctx=finCanvas.getContext('2d');
+function resizeFin(){
+  finCanvas.width=finCanvas.offsetWidth*devicePixelRatio;
+  finCanvas.height=finCanvas.offsetHeight*devicePixelRatio;
+  finCanvas.style.width=finCanvas.offsetWidth+'px';
+  finCanvas.style.height=finCanvas.offsetHeight+'px';
+}
+resizeFin();window.addEventListener('resize',resizeFin);
+
+function renderFinale(){
+  requestAnimationFrame(renderFinale);
+  const fw=finCanvas.width,fh=finCanvas.height,fcx=fw/2,fcy=fh/2;
+  fctx.clearRect(0,0,fw,fh);
+  // Ambient particle field
+  fctx.save();
+  const n=60;
+  for(let i=0;i<n;i++){
+    const angle=(i/n)*Math.PI*2+time*.1;
+    const r=fh*.3+Math.sin(time*.3+i)*.05*fh;
+    const x=fcx+Math.cos(angle)*r*(fw/fh);
+    const y=fcy+Math.sin(angle)*r;
+    const a=(.3+Math.sin(time*.5+i)*.15)*.4;
+    fctx.beginPath();fctx.arc(x,y,1.2*devicePixelRatio,0,Math.PI*2);
+    fctx.fillStyle=`rgba(200,168,75,${a})`;fctx.fill();
+  }
+  fctx.restore();
+}
+requestAnimationFrame(renderFinale);
+</script>
+</body>
+</html>

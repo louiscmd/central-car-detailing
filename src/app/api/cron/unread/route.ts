@@ -29,14 +29,16 @@ export async function GET(req: Request) {
   });
 
   const results = await Promise.allSettled(
-    unread.map(msg =>
-      sendPushToUser(msg.client.userId, {
-        title: `Unread message from ${msg.client.name}`,
-        body: `You have unread messages waiting for over ${UNREAD_THRESHOLD_HOURS} hours.`,
-        icon: "/icon-192.png",
-        url: `/clients/${msg.clientId}/chat`,
-      })
-    )
+    unread
+      .filter(msg => msg.client != null)
+      .map(msg =>
+        sendPushToUser(msg.client!.userId, {
+          title: `Unread message from ${msg.client!.name}`,
+          body: `You have unread messages waiting for over ${UNREAD_THRESHOLD_HOURS} hours.`,
+          icon: "/icon-192.png",
+          url: `/clients/${msg.clientId}/chat`,
+        })
+      )
   );
 
   const sent = results.filter(r => r.status === "fulfilled").length;
